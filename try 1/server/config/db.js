@@ -8,13 +8,17 @@ const { Pool } = pg;
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  //Disable SSL in local dev
   ssl:
     process.env.NODE_ENV === "production"
       ? { rejectUnauthorized: true }
       : false,
 });
 
-pool.connect().then(() => console.log("Database connected"));
+// Test the connection on startup
+pool.connect()
+  .then(() => console.log('✅ PostgreSQL connected'))
+  .catch((err) => console.error('❌ PostgreSQL connection error', err));
 
 export const query = (text, params) => pool.query(text, params);
 export default pool;
