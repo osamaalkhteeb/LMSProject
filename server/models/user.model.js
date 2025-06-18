@@ -5,7 +5,7 @@ const UserModel = {
   async findUserByEmail(email) {
     try {
       const { rows } = await query(
-        "SELECT id, name, email, role, password_hash, oauth_provider, oauth_id FROM users WHERE email = $1",
+        "SELECT id, name, email, role, password_hash, oauth_provider, oauth_id,is_active FROM users WHERE email = $1",
         [email]
       );
       return rows[0];
@@ -19,7 +19,7 @@ const UserModel = {
   async findUserById(id) {
     try {
       const { rows } = await query(
-        "SELECT id, name, email, role, bio, avatar_url, is_active, created_at FROM users WHERE id = $1",
+        "SELECT id, name, email, role, bio, avatar_url, image_public_id, is_active, created_at FROM users WHERE id = $1",
         [id]
       );
       return rows[0];
@@ -57,11 +57,11 @@ const UserModel = {
   },
   
   // create OAuth user
-  async createOAuthUser({ name, email, oauth_provider, oauth_id, avatar_url, role = "student" }) {
+  async createOAuthUser({ name, email, oauthProvider, oauthId, avatarUrl, role = "student" }) {
     try {
       const { rows } = await query(
-        "INSERT INTO users (name, email, avatar_url, oauth_provider, oauth_id, role) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, name, email, role",
-        [name, email, avatar_url, oauth_provider, oauth_id, role]
+        "INSERT INTO users (name, email, avatar_url, oauth_provider, oauth_id, role) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, name, email, role, avatar_url",
+        [name, email, avatarUrl, oauthProvider, oauthId, role]
       );
       return rows[0];
     } catch (error) {
@@ -105,13 +105,23 @@ const UserModel = {
   },
   
   // Update user
-  async updateUser(id, { name, bio, avatar_url }) {
+  async updateUser(id, { name, bio, avatarUrl, imagePublic_id }) {
     try {
-      const { rows } = await query(
-        "UPDATE users SET name = $1, bio = $2, avatar_url = $3, updated_at = NOW() WHERE id = $4 RETURNING id, name, email, role, bio, avatar_url",
-        [name, bio, avatar_url, id]
-      );
-      return rows[0];
+      // If image_public_id is provided, update it along with other fields
+      if (imagePublic_id) {
+        const { rows } = await query(
+          "UPDATE users SET name = $1, bio = $2, avatar_url = $3, image_public_id = $4, updated_at = NOW() WHERE id = $5 RETURNING id, name, email, role, bio, avatar_url, image_public_id",
+          [name, bio, avatarUrl, imagePublic_id, id]
+        );
+        return rows[0];
+      } else {
+        // Otherwise just update the regular fields
+        const { rows } = await query(
+          "UPDATE users SET name = $1, bio = $2, avatar_url = $3, updated_at = NOW() WHERE id = $4 RETURNING id, name, email, role, bio, avatar_url, image_public_id",
+          [name, bio, avatarUrl, id]
+        );
+        return rows[0];
+      }
     } catch (error) {
       throw error;
     }

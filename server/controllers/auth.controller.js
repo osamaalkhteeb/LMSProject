@@ -8,7 +8,7 @@ import {
 } from "../utils/helper.js";
 import { HTTP_STATUS } from "../config/constants.js";
 
-export const AuthController = {
+const AuthController = {
   // Register new user
   async register(req, res) {
     try {
@@ -34,6 +34,9 @@ export const AuthController = {
         role: "student",
       });
 
+      if(!newUser) {
+        throw new Error("User creation failed")
+      }
       // Generate tokens
       const accessToken = generateAccessToken(newUser);
       const refreshToken = generateRefreshToken(newUser);
@@ -48,7 +51,12 @@ export const AuthController = {
 
       res.status(HTTP_STATUS.OK).json(
         createResponse(true, "User registered successfully", {
-          user: newUser,
+          user:{
+            id: newUser.id,
+            name: newUser.name,
+            email: newUser.email,
+            role: newUser.role,
+          },
           accessToken,
         })
       );
@@ -56,7 +64,7 @@ export const AuthController = {
       console.error("Register error:", error);
       res
         .status(HTTP_STATUS.SERVER_ERROR)
-        .json(createResponse(false, "Registration failed"));
+        .json(createResponse(false, "Registration failed",null,{error:error.message}));
     }
   },
 
@@ -244,3 +252,5 @@ export const AuthController = {
       .json(createResponse(false, "OAuth authentication failed"));
   },
 };
+
+export default AuthController;

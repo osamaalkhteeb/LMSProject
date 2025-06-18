@@ -12,7 +12,8 @@ CREATE TABLE users (
     is_active BOOLEAN DEFAULT TRUE ,
     last_login_at TIMESTAMP WITH TIME ZONE,
     bio TEXT,
-    avatar_url TEXT;
+    avatar_url TEXT,
+    image_public_id TEXT
 );
 
 -- COURSES
@@ -25,7 +26,7 @@ CREATE TABLE courses (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     thumbnail_url TEXT,
-    price NUMERIC(10, 2) DEFAULT 0.00,
+    image_public_id TEXT,
 	is_featured BOOLEAN DEFAULT false,
 	is_published BOOLEAN DEFAULT false,
 	is_approved BOOLEAN DEFAULT false;
@@ -61,9 +62,10 @@ CREATE TABLE lessons (
     id SERIAL PRIMARY KEY,
     module_id INTEGER REFERENCES modules(id),
     title VARCHAR(150),
-    content_type VARCHAR(20) CHECK (content_type IN ('video', 'quiz', 'text')),
+    content_type VARCHAR(20) CHECK (content_type IN ('video', 'quiz', 'text', 'assignment')),
     content_url TEXT,
-    duration INTEGER
+    duration INTEGER,
+    order_num INTEGER
 );
 
 -- ASSIGNMENTS
@@ -78,13 +80,14 @@ CREATE TABLE assignments (
 -- SUBMISSIONS
 CREATE TABLE submissions (
     id SERIAL PRIMARY KEY,
-    assignment_id INTEGER REFERENCES assignments(id) SET NOT NULL,
-    user_id INTEGER REFERENCES users(id) SET NOT NULL,
-    submission_url TEXT SET NOT NULL,
-    submitted_at TIMESTAMP WITH TIME ZONE,
+    assignment_id INTEGER REFERENCES assignments(id) NOT NULL,
+    user_id INTEGER REFERENCES users(id) NOT NULL,
+    submission_url TEXT NOT NULL,
+    submitted_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     grade INTEGER CHECK (grade >= 0 AND grade <= 100),
     feedback TEXT,
     graded_at TIMESTAMP WITH TIME ZONE,
+    UNIQUE(assignment_id, user_id)
 );
 
 -- NOTIFICATIONS
@@ -107,10 +110,11 @@ CREATE TABLE lesson_completions (
 -- Quizzes (revised)
 CREATE TABLE quizzes (
     id SERIAL PRIMARY KEY,
-    lesson_id INTEGER REFERENCES lessons(id) UNIQUE,
+    lesson_id INTEGER REFERENCES lessons(id),
     title VARCHAR(150),
-    passing_score INTEGER DEFAULT 70,
+    passing_score INTEGER DEFAULT 50,
     time_limit INTEGER -- in minutes, NULL means no time limit
+    max_attempts INTEGER DEFAULT 1
 );
 
 -- QUIZ_QUESTIONS
@@ -138,9 +142,10 @@ CREATE TABLE quiz_results (
     user_id INTEGER REFERENCES users(id),
     quiz_id INTEGER REFERENCES quizzes(id),
     score INTEGER CHECK (score BETWEEN 0 AND 100),
+    attempt_number INTEGER DEFAULT 1,
     started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMP WITH TIME ZONE,
-    UNIQUE (user_id, quiz_id) -- Optional: Allow only one attempt per quiz
+    UNIQUE (user_id, quiz_id, attempt_number) -- Allow multiple attempts per quiz
 );
 
 -- QUIZ_ANSWERS
@@ -223,3 +228,7 @@ SELECT
 FROM certificates c
 JOIN users u ON c.user_id = u.id
 JOIN courses co ON c.course_id = co.id;
+
+-- Data fixes and updates
+-- Update any NULL points in quiz_questions to default value of 1
+UPDATE quiz_questions SET points = 1 WHERE points IS NULL;

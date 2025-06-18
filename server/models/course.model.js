@@ -1,18 +1,18 @@
-import { query } from "../config/db";
+import { query } from "../config/db.js";
 
 const CourseModel = {
   // Create a new course (Instructor only)
   async createCourse({
     title,
     description,
-    instructor_id,
-    category_id,
-    thumbnail_url,
+    instructorId,
+    categoryId,
+    thumbnailUrl,
   }) {
     try {
       const { rows } = await query(
-        "INSERT INTO courses (title, description, instructor_id, category_id, thumbnail_url) VALUES ($1, $2, $3, $4, $5) RETURNING id",
-        [title, description, instructor_id, category_id, thumbnail_url]
+        "INSERT INTO courses (title, description, instructor_id, category_id, thumbnail_url) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+        [title, description, instructorId, categoryId, thumbnailUrl]
       );
       return rows[0];
     } catch (error) {
@@ -21,15 +21,37 @@ const CourseModel = {
     }
   },
 
-  // Update Course (Instructor,Admin)
-  async updateCourse({ id, updates }) {
+  // Update Course (Instructor/Admin)
+  async updateCourse(id, updates) {
     try {
-      const { title, description, category_id, thumbnail_url, is_published } =
-        updates;
-      const { rows } = await query(
-        "UPDATE courses SET title = $1, description = $2, category_id = $3, thumbnail_url = $4, is_published = $5, updated_at = CURRENT_TIMESTAMP WHERE id = $6 RETURNING id",
-        [title, description, category_id, thumbnail_url, is_published, id]
-      );
+      const fields = [];
+      const values = [];
+      let paramIndex = 1;
+
+      // Build dynamic update query
+      Object.keys(updates).forEach((key) => {
+        if (updates[key] !== undefined) {
+          fields.push(`${key} = $${paramIndex++}`);
+          values.push(updates[key]);
+        }
+      });
+
+      if (fields.length === 0) {
+        throw new Error("No fields to update");
+      }
+
+      // Add updated_at timestamp
+      fields.push(`updated_at = CURRENT_TIMESTAMP`);
+      values.push(id);
+
+      const updateQuery = `
+        UPDATE courses 
+        SET ${fields.join(", ")} 
+        WHERE id = $${paramIndex} 
+        RETURNING *
+      `;
+
+      const { rows } = await query(updateQuery, values);
       return rows[0];
     } catch (error) {
       console.error("Error updating course:", error);
@@ -41,7 +63,7 @@ const CourseModel = {
   async deleteCourse(id) {
     try {
       const { rows } = await query(
-        "DELETE FROM courses WHERE id = $1 RETURNING id",
+        "DELETE FROM courses WHERE id = $1 RETURNING *",
         [id]
       );
       return rows[0];
@@ -51,14 +73,21 @@ const CourseModel = {
     }
   },
 
-  // Get course by ID (with instructor details)
-  async getCourseId(id) {
+  // Get course by ID (with instructor and category details)
+  async getCourseById(id) {
     try {
       const { rows } = await query(
-        `SELECT c.*, u.name as instructor_name, u.avatar_url as instructor_avatar 
+        `SELECT c.*, 
+                u.name as instructor_name, 
+                u.avatar_url as instructor_avatar,
+                cat.name as category_name,
+                COUNT(e.id) as enrolled_count
          FROM courses c
-         JOIN users u ON c.instructor_id = u.id
-         WHERE c.id = $1`,
+         LEFT JOIN users u ON c.instructor_id = u.id
+         LEFT JOIN categories cat ON c.category_id = cat.id
+         LEFT JOIN enrollments e ON c.id = e.course_id
+         WHERE c.id = $1
+         GROUP BY c.id, u.name, u.avatar_url, cat.name`,
         [id]
       );
       return rows[0];
@@ -68,64 +97,209 @@ const CourseModel = {
     }
   },
 
-  // List all courses (filterable by category, instructor, etc.)
+  // List courses with flexible filtering
   async listCourses({
-    category_id,
-    instructor_id,
-    is_published,
+    categoryId,
+    instructorId,
+    isPublished,
+    isApproved,
+    search,
     limit = 20,
     offset = 0,
   }) {
     try {
       let baseQuery = `
-        SELECT c.*, u.name as instructor_name, cat.name as category_name
+        SELECT c.*, 
+               u.name as instructor_name, 
+               u.avatar_url as instructor_avatar,
+               cat.name as category_name,
+               COUNT(e.id) as enrolled_count
         FROM courses c
-        JOIN users u ON c.instructor_id = u.id
-        JOIN categories cat ON c.category_id = cat.id
-        WHERE c.is_published = true AND c.is_approved = true
+        LEFT JOIN users u ON c.instructor_id = u.id
+        LEFT JOIN categories cat ON c.category_id = cat.id
+        LEFT JOIN enrollments e ON c.id = e.course_id
+        WHERE 1=1
       `;
+
       const params = [];
       let paramIndex = 1;
 
-      // Dynamic filters
-      if (category_id) {
+      // Filter by category
+      if (categoryId) {
         baseQuery += ` AND c.category_id = $${paramIndex++}`;
-        params.push(category_id);
-      }
-      if (instructor_id) {
-        baseQuery += ` AND c.instructor_id = $${paramIndex++}`;
-        params.push(instructor_id);
-      }
-      if (is_published) {
-        baseQuery += ` AND c.is_published = $${paramIndex++}`;
-        params.push(is_published);
+        params.push(categoryId);
       }
 
-      // Pagination
-      baseQuery += ` LIMIT $${paramIndex++} OFFSET $${paramIndex}`;
+      // Filter by instructor
+      if (instructorId) {
+        baseQuery += ` AND c.instructor_id = $${paramIndex++}`;
+        params.push(instructorId);
+      }
+
+      // Filter by published status
+      if (isPublished !== undefined) {
+        baseQuery += ` AND c.is_published = $${paramIndex++}`;
+        params.push(isPublished);
+      }
+
+      // Filter by approved status
+      if (isApproved !== undefined) {
+        baseQuery += ` AND c.is_approved = $${paramIndex++}`;
+        params.push(isApproved);
+      }
+
+      // Search by title or description
+      if (search) {
+        const searchPattern = `%${search}%`;
+        baseQuery += ` AND (c.title ILIKE $${paramIndex} OR c.description ILIKE $${paramIndex})`;
+        params.push(searchPattern);
+        paramIndex++;
+      }
+
+      // Add GROUP BY clause for aggregation
+      baseQuery += ` GROUP BY c.id, u.name, u.avatar_url, cat.name`;
+      
+      // Add ordering and pagination
+      baseQuery += ` ORDER BY c.created_at DESC LIMIT $${paramIndex++} OFFSET $${paramIndex}`;
       params.push(limit, offset);
 
       const { rows } = await query(baseQuery, params);
-      return rows;
+
+      // Get total count for pagination
+      let countQuery = `
+        SELECT COUNT(*) as total
+        FROM courses c
+        WHERE 1=1
+      `;
+
+      const countParams = [];
+      let countParamIndex = 1;
+
+      // Apply same filters for count
+      if (categoryId) {
+        countQuery += ` AND c.category_id = $${countParamIndex++}`;
+        countParams.push(categoryId);
+      }
+      if (instructorId) {
+        countQuery += ` AND c.instructor_id = $${countParamIndex++}`;
+        countParams.push(instructorId);
+      }
+      if (isPublished !== undefined) {
+        countQuery += ` AND c.is_published = $${countParamIndex++}`;
+        countParams.push(isPublished);
+      }
+      if (isApproved !== undefined) {
+        countQuery += ` AND c.is_approved = $${countParamIndex++}`;
+        countParams.push(isApproved);
+      }
+      if (search) {
+        countQuery += ` AND (c.title ILIKE $${countParamIndex++} OR c.description ILIKE $${countParamIndex++})`;
+        countParams.push(`%${search}%`, `%${search}%`);
+        countParamIndex++;
+      }
+
+      const { rows: countRows } = await query(countQuery, countParams);
+      const total = parseInt(countRows[0].total);
+
+      return {
+        courses: rows,
+        pagination: {
+          total,
+          limit,
+          offset,
+          pages: Math.ceil(total / limit),
+          currentPage: Math.floor(offset / limit) + 1,
+        },
+      };
     } catch (error) {
       console.error("Error fetching courses:", error);
       throw error;
     }
   },
 
-  // Approve course (Admin only)
-  async approveCourse(id, is_approved) {
+  // Get public courses (published and approved only)
+  async getPublicCourses({ categoryId, search, limit = 20, offset = 0 }) {
+    return this.listCourses({
+      categoryId,
+      search,
+      isPublished: true,
+      isApproved: true,
+      limit,
+      offset,
+    });
+  },
+
+  // Get instructor's courses (all their courses regardless of status)
+  async getInstructorCourses(
+    instructorId,
+    { categoryId, limit = 20, offset = 0 }
+  ) {
+    return this.listCourses({
+      instructorId,
+      categoryId,
+      limit,
+      offset,
+    });
+  },
+
+  // Get pending courses (published but not approved - for admin)
+  async getPendingCourses({ limit = 20, offset = 0 }) {
+    return this.listCourses({
+      isPublished: true,
+      isApproved: false,
+      limit,
+      offset,
+    });
+  },
+
+  // Approve/Reject course (Admin only)
+  async approveCourse(id, isApproved) {
     try {
       const { rows } = await query(
         `UPDATE courses 
          SET is_approved = $1, updated_at = CURRENT_TIMESTAMP 
          WHERE id = $2 
          RETURNING *`,
-        [is_approved, id]
+        [isApproved, id]
       );
       return rows[0];
     } catch (error) {
       console.error("Error approving course:", error);
+      throw error;
+    }
+  },
+
+  // Publish/Unpublish course (Instructor/Admin)
+  async publishCourse(id, isPublished) {
+    try {
+      const { rows } = await query(
+        `UPDATE courses 
+         SET is_published = $1, updated_at = CURRENT_TIMESTAMP 
+         WHERE id = $2 
+         RETURNING *`,
+        [isPublished, id]
+      );
+      return rows[0];
+    } catch (error) {
+      console.error("Error publishing course:", error);
+      throw error;
+    }
+  },
+
+  // Get course statistics
+  async getCourseStats() {
+    try {
+      const { rows } = await query(`
+        SELECT 
+          COUNT(*) as total_courses,
+          COUNT(CASE WHEN is_published = true THEN 1 END) as published_courses,
+          COUNT(CASE WHEN is_approved = true THEN 1 END) as approved_courses,
+          COUNT(CASE WHEN is_published = true AND is_approved = true THEN 1 END) as public_courses
+        FROM courses
+      `);
+      return rows[0];
+    } catch (error) {
+      console.error("Error fetching course stats:", error);
       throw error;
     }
   },
