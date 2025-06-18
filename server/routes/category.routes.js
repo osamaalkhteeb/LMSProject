@@ -9,8 +9,8 @@ router.get("/", CategoryController.listCategories);
 router.get("/:id", CategoryController.getCategoryById);
 
 // Admin-only routes
-router.post("/", authenticate, authorize("admin"), CategoryController.createCategory);
-router.put("/:id", authenticate, authorize("admin"), CategoryController.updateCategory);
-router.delete("/:id", authenticate, authorize("admin"), CategoryController.deleteCategory);
+router.post("/", authenticate, authorize(["admin"]), CategoryController.createCategory);
+router.put("/:id", authenticate, authorize(["admin"]), CategoryController.updateCategory);
+router.delete("/:id", authenticate, authorize(["admin"]), CategoryController.deleteCategory);
 
 export default router;

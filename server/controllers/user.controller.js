@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import UserModel from "../models/user.model.js";
 import { createResponse } from "../utils/helper.js";
 import { HTTP_STATUS, USER_ROLES } from "../config/constants.js";
+import { uploadImage, deleteImage } from "../config/cloudinary.js";
 
 export const UserController = {
   // Get current user profile
@@ -29,11 +30,28 @@ export const UserController = {
     try {
       const { name, bio, avatar_url } = req.body;
       const userId = req.user.id;
+      
+      // Get current user to check for existing image
+      const currentUser = await UserModel.findUserById(userId);
+      
+      // Check if avatar_url is being changed
+      if (avatar_url && avatar_url.trim() !== currentUser.avatar_url && currentUser.image_public_id) {
+        // If avatar_url is being changed and we have a stored public_id, delete the old image
+        try {
+          await deleteImage(currentUser.image_public_id);
+
+        } catch (deleteError) {
+          console.error("Error deleting old image:", deleteError);
+          // Continue with update even if delete fails
+        }
+      }
 
       const updatedUser = await UserModel.updateUser(userId, {
         name: name.trim(),
         bio: bio?.trim() || null,
         avatar_url: avatar_url?.trim() || null,
+        // Clear the image_public_id if avatar_url is changed manually
+        image_public_id: avatar_url && avatar_url.trim() !== currentUser.avatar_url ? null : currentUser.image_public_id
       });
 
       if (!updatedUser) {
@@ -272,6 +290,73 @@ export const UserController = {
       res
         .status(HTTP_STATUS.SERVER_ERROR)
         .json(createResponse(false, "Failed to retrieve user statistics"));
+    }
+  },
+
+  // Upload profile image to Cloudinary
+  async uploadProfileImage(req, res) {
+    try {
+      // Check if file exists in the request
+      if (!req.file) {
+        return res
+          .status(HTTP_STATUS.BAD_REQUEST)
+          .json(createResponse(false, "No image file provided"));
+      }
+
+      const userId = req.user.id;
+      
+      // Get current user to check for existing image
+      const currentUser = await UserModel.findUserById(userId);
+      
+      // Delete old image if it exists
+      if (currentUser && currentUser.image_public_id) {
+        try {
+          await deleteImage(currentUser.image_public_id);
+
+        } catch (deleteError) {
+          console.error("Error deleting old image:", deleteError);
+          // Continue with upload even if delete fails
+        }
+      }
+
+      // Convert buffer to base64 for Cloudinary upload
+      const fileBuffer = req.file.buffer;
+      const fileType = req.file.mimetype;
+      const base64String = `data:${fileType};base64,${fileBuffer.toString('base64')}`;
+
+      // Upload image to Cloudinary
+      const uploadResult = await uploadImage(base64String, {
+        folder: 'profile_images',
+        public_id: `user_${userId}_${Date.now()}`,
+        overwrite: true,
+        resource_type: 'image'
+      });
+
+      // Update user's avatar_url and image_public_id in the database
+      const updatedUser = await UserModel.updateUser(userId, {
+        name: currentUser.name, // Keep existing name
+        bio: currentUser.bio, // Keep existing bio
+        avatarUrl: uploadResult.secure_url, // Update with new Cloudinary URL
+        imagePublic_id: uploadResult.public_id // Store the public_id for future deletion
+      });
+
+      if (!updatedUser) {
+        return res
+          .status(HTTP_STATUS.NOT_FOUND)
+          .json(createResponse(false, "User not found"));
+      }
+
+      res.json(
+        createResponse(true, "Profile image uploaded successfully", {
+          avatar_url: uploadResult.secure_url,
+          public_id: uploadResult.public_id
+        })
+      );
+    } catch (error) {
+      console.error("Image upload error:", error);
+      res
+        .status(HTTP_STATUS.SERVER_ERROR)
+        .json(createResponse(false, "Failed to upload profile image"));
     }
   },
 };

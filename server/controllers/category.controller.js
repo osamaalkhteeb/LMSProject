@@ -13,15 +13,21 @@ export const CategoryController = {
           .json(createResponse(false, "Name is required"));
       }
 
-      const category = await CategoryModel.createCategory(name);
+      const category = await CategoryModel.createCategory({name});
 
       res
         .status(HTTP_STATUS.CREATED)
         .json(createResponse(true, "Category created successfully", category));
     } catch (error) {
       console.error("Error creating category:", error);
+      if (error.message === 'Category with this name already exists' || 
+        error.code === '23505') { // 23505 is PostgreSQL unique constraint violation
+      return res
+        .status(409) // Conflict status
+        .json(createResponse(false, "Category with this name already exists"));
+    }
       res
-        .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+        .status(HTTP_STATUS.SERVER_ERROR)
         .json(createResponse(false, "Failed to create category"));
     }
   },

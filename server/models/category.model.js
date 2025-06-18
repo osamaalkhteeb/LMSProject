@@ -4,8 +4,18 @@ const CategoryModel = {
   // Create a new category ( Admin Only)
   async createCategory({ name }) {
     try {
+        // Check if category already exists
+    const existingCategory = await query(
+      "SELECT id FROM categories WHERE LOWER(name) = LOWER($1)",
+      [name.trim()]
+    );
+    
+    if (existingCategory.rows.length > 0) {
+      throw new Error('Category with this name already exists');
+    }
+    
       const { rows } = await query(
-        "INSERT INTO categories (name) VALUES ($1) RETURNING id",
+        "INSERT INTO categories (name) VALUES ($1) RETURNING *",
         [name.trim()]
       );
       return rows[0];

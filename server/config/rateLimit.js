@@ -14,10 +14,10 @@ export const globalLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-export const authLimiter = {
+export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
   message: createResponse( false, "Too many attempts, please try again later"),
   standardHeaders: true,
   legacyHeaders: false,
-};
+});
