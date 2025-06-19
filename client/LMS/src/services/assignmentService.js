@@ -3,9 +3,7 @@ import apiClient from './apiClient.js';
 // Create assignment (Instructor/Admin only)
 export const createAssignment = async (courseId, lessonId, assignmentData) => {
   try {
-    console.log('Creating assignment with data:', { courseId, lessonId, assignmentData });
-    const response = await apiClient.post(`/assignments/courses/${courseId}/lessons/${lessonId}`, assignmentData);
-    console.log('Assignment creation response:', response.data);
+    const response = await apiClient.post(`/assignments`, { courseId, lessonId, ...assignmentData });
     return response.data?.data || response.data;
   } catch (error) {
     console.error('Error creating assignment:', error);
@@ -71,23 +69,34 @@ export const submitAssignment = async (id, submissionData) => {
 };
 
 // Get submissions for an assignment (Instructor/Admin only)
-export const getAssignmentSubmissions = async (id) => {
+export const getAssignmentSubmissions = async (courseId, assignmentId) => {
   try {
-    const response = await apiClient.get(`/assignments/${id}/submissions`);
-    return response.data?.data || [];
+    const response = await apiClient.get(`/assignments/courses/${courseId}/assignments/${assignmentId}/submissions`);
+    return response.data;
   } catch (error) {
-    console.error(`Error fetching submissions for assignment ${id}:`, error);
+    console.error(`Error fetching submissions for assignment ${assignmentId}:`, error);
     throw error;
   }
 };
 
 // Grade a submission (Instructor/Admin only)
-export const gradeSubmission = async (submissionId, gradeData) => {
+export const gradeSubmission = async (courseId, submissionId, gradeData) => {
   try {
-    const response = await apiClient.put(`/submissions/${submissionId}/grade`, gradeData);
-    return response.data?.data || response.data;
+    const response = await apiClient.put(`/assignments/courses/${courseId}/submissions/${submissionId}/grade`, gradeData);
+    return response.data;
   } catch (error) {
     console.error(`Error grading submission ${submissionId}:`, error);
+    throw error;
+  }
+};
+
+// Get all assignments for instructor
+export const getInstructorAssignments = async () => {
+  try {
+    const response = await apiClient.get('/assignments/instructor/assignments');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching instructor assignments:', error);
     throw error;
   }
 };

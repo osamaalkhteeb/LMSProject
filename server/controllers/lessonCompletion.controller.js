@@ -48,16 +48,40 @@ export const LessonCompletionController = {
 
   async getCompletedLessonsByCourse(req, res) {
     try {
-      const userId = req.user.id;
       const { courseId } = req.params;
+      const userId = req.user.id;
       
       const completedLessons = await LessonCompletionModel.getCompletedLessonsByCourse(userId, courseId);
-      res.json(createResponse(true, "Completed lessons retrieved successfully", { completedLessons }));
+      
+      res.status(200).json({
+        success: true,
+        data: completedLessons
+      });
     } catch (error) {
-      console.error("Error getting completed lessons by course:", error);
-      res
-        .status(HTTP_STATUS.SERVER_ERROR)
-        .json(createResponse(false, "Failed to get completed lessons"));
+      console.error('Error getting completed lessons by course:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to get completed lessons by course'
+      });
+    }
+  },
+
+  async getAllCompletedLessonsByCourse(req, res) {
+    try {
+      const { courseId } = req.params;
+      
+      const completedLessons = await LessonCompletionModel.getAllCompletedLessonsByCourse(courseId);
+      
+      res.status(200).json({
+        success: true,
+        data: completedLessons
+      });
+    } catch (error) {
+      console.error('Error getting all completed lessons by course:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to get all completed lessons by course'
+      });
     }
   },
 

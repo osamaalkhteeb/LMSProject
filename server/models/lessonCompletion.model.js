@@ -63,6 +63,24 @@ const LessonCompletionModel = {
     }
   },
 
+  async getAllCompletedLessonsByCourse(courseId) {
+    try {
+      const { rows } = await query(
+        `SELECT lc.user_id, lc.lesson_id, lc.completed_at, l.title, m.title as module_title
+         FROM lesson_completions lc
+         JOIN lessons l ON lc.lesson_id = l.id
+         JOIN modules m ON l.module_id = m.id
+         WHERE m.course_id = $1
+         ORDER BY lc.user_id, m.order_num, l.order_num`,
+        [courseId]
+      );
+      return rows;
+    } catch (error) {
+      console.error("Error getting all completed lessons by course:", error);
+      throw error;
+    }
+  },
+
   async unmarkComplete(userId, lessonId) {
     try {
       const { rows } = await query(

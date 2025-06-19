@@ -7,7 +7,19 @@ import {
   Tabs,
   Tab,
   CircularProgress,
-  Alert
+  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow
 } from "@mui/material";
 import { MoreVert as MoreIcon } from "@mui/icons-material";
 import InstructorProfile from "../../components/instructor/InstructorProfile";
@@ -25,6 +37,8 @@ import {
   Star
 } from "@mui/icons-material";
 import { getInstructorCourses } from "../../services/courseService";
+import { getEnrollmentsByCourse } from "../../services/enrollmentService";
+import { useInstructorAnalytics } from "../../hooks/useAnalytics";
 
 const InstructorDashboard = () => {
   const [selectedTab, setSelectedTab] = useState(0);
@@ -34,6 +48,9 @@ const InstructorDashboard = () => {
   const [currentCourse, setCurrentCourse] = useState(null);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'detail'
+  const [enrolledStudents, setEnrolledStudents] = useState([]);
+  const [studentsDialogOpen, setStudentsDialogOpen] = useState(false);
+  const [selectedCourseForStudents, setSelectedCourseForStudents] = useState(null);
   const [dashboardData, setDashboardData] = useState({
     courses: [],
     stats: {
@@ -45,6 +62,9 @@ const InstructorDashboard = () => {
     loading: true,
     error: null,
   });
+  
+  // Use analytics hook instead of manual state management
+  const { analytics: analyticsData, loading: analyticsLoading, error: analyticsError, refetch: refetchAnalytics } = useInstructorAnalytics();
   
   const open = Boolean(anchorEl);
   const { user } = useAuthContext();
@@ -93,6 +113,8 @@ const InstructorDashboard = () => {
       }));
     }
   };
+
+  // Analytics data is now handled by the hook
 
   // Instructor data using real user info
   const instructor = {
@@ -170,15 +192,10 @@ const InstructorDashboard = () => {
     },
   ];
 
-  // Calculate analytics from real data
-  const analytics = {
-    monthlyRevenue: [], // This would need historical data from API
-    studentEnrollments: [], // This would need historical enrollment data
-    coursePerformance: dashboardData.courses.map(course => ({
-      name: course.title,
-      students: course.enrolled_count || 0,
-      revenue: (course.enrolled_count || 0) * (course.price || 0),
-    })),
+  // Refresh both data sets
+  const handleRefreshAll = () => {
+    fetchInstructorData();
+    fetchAnalyticsData();
   };
 
   const handleTabChange = (event, newValue) => {
@@ -215,6 +232,24 @@ const InstructorDashboard = () => {
   const handleBackToCourses = () => {
     setSelectedCourse(null);
     setViewMode('list');
+  };
+
+  const handleViewStudents = async (course) => {
+    try {
+      setSelectedCourseForStudents(course);
+      const students = await getEnrollmentsByCourse(course.id);
+      setEnrolledStudents(students);
+      setStudentsDialogOpen(true);
+    } catch (error) {
+      console.error('Error fetching enrolled students:', error);
+      // You could add a snackbar or alert here to show the error
+    }
+  };
+
+  const handleStudentsDialogClose = () => {
+    setStudentsDialogOpen(false);
+    setSelectedCourseForStudents(null);
+    setEnrolledStudents([]);
   };
 
   return (
@@ -287,11 +322,12 @@ const InstructorDashboard = () => {
           <CoursesTab 
             courses={dashboardData.courses}
             loading={dashboardData.loading}
-            error={dashboardData.error}
-            onRefresh={fetchInstructorData}
+ve            error={dashboardData.error}
+            onRefresh={handleRefreshAll}
             handleDialogOpen={handleDialogOpen}
             handleMenuClick={handleMenuClick}
             handleCourseClick={handleCourseClick}
+            handleViewStudents={handleViewStudents}
           />
         ) : (
           <CourseDetailView 
@@ -306,7 +342,11 @@ const InstructorDashboard = () => {
       )}
 
       {selectedTab === 2 && (
-        <AnalyticsTab analytics={analytics} />
+        <AnalyticsTab 
+          analytics={analyticsData}
+          loading={analyticsLoading}
+          error={analyticsError}
+        />
       )}
 
       <CourseMenu
@@ -322,8 +362,55 @@ const InstructorDashboard = () => {
         handleDialogClose={handleDialogClose}
         dialogType={dialogType}
         currentCourse={currentCourse}
-        onSuccess={fetchInstructorData}
+        onSuccess={handleRefreshAll}
       />
+
+      {/* Enrolled Students Dialog */}
+      <Dialog
+        open={studentsDialogOpen}
+        onClose={handleStudentsDialogClose}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          Enrolled Students - {selectedCourseForStudents?.title}
+        </DialogTitle>
+        <DialogContent>
+          {enrolledStudents.length === 0 ? (
+             <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+               No students enrolled in this course yet.
+             </Typography>
+           ) : (
+             <TableContainer>
+               <Table>
+                 <TableHead>
+                   <TableRow>
+                     <TableCell>Student Name</TableCell>
+                     <TableCell>Email</TableCell>
+                     <TableCell>Enrolled Date</TableCell>
+                     <TableCell>Progress</TableCell>
+                   </TableRow>
+                 </TableHead>
+                 <TableBody>
+                   {enrolledStudents.map((enrollment) => (
+                     <TableRow key={enrollment.id}>
+                       <TableCell>{enrollment.user_name}</TableCell>
+                       <TableCell>{enrollment.email}</TableCell>
+                       <TableCell>
+                         {new Date(enrollment.enrolled_at).toLocaleDateString()}
+                       </TableCell>
+                       <TableCell>{enrollment.progress || 0}%</TableCell>
+                     </TableRow>
+                   ))}
+                 </TableBody>
+               </Table>
+             </TableContainer>
+           )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleStudentsDialogClose}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

@@ -1,4 +1,3 @@
-
 import React from "react";
 import {
   Box,
@@ -18,16 +17,10 @@ const Footer = () => {
     <Box
       component="footer"
       sx={{
-        backgroundColor: theme.palette.background.paper, // Uses theme's paper color
-        color: theme.palette.text.primary, // Uses theme's text color
+        backgroundColor: theme.palette.background.paper,
+        color: theme.palette.text.primary,
         py: 1,
-        mt: "auto",
-        position: "relative",
-        bottom: 0,
-        left: 0,
-        right: 0,
-        width: "100%",
-        borderTop: `1px solid ${theme.palette.divider}`, // Adds a subtle border
+        borderTop: `1px solid ${theme.palette.divider}`,
       }}
     >
       <Container maxWidth="xl">
@@ -38,7 +31,7 @@ const Footer = () => {
               <School sx={{ 
                 mr: 1, 
                 fontSize: 28,
-                color: theme.palette.text.primary // Theme-aware icon color
+                color: theme.palette.text.primary
               }} />
               <Typography variant="h5" fontWeight="bold">
                 EduGo
@@ -49,7 +42,7 @@ const Footer = () => {
               sx={{ 
                 mb: 3, 
                 lineHeight: 1.6,
-                color: theme.palette.text.secondary // Secondary text color
+                color: theme.palette.text.secondary
               }}
             >
               An advanced educational platform designed to provide the best
@@ -90,7 +83,7 @@ const Footer = () => {
         {/* Divider */}
         <Divider sx={{ 
           my: 4, 
-          backgroundColor: theme.palette.divider // Theme-aware divider
+          backgroundColor: theme.palette.divider
         }} />
 
         {/* Copyright & Legal */}

@@ -107,10 +107,20 @@ const CourseDialog = ({
   };
 
   const handleSubmit = async () => {
-    // Only validate title for create and edit operations
-    if ((dialogType === "create" || dialogType === "edit") && !formData.title.trim()) {
-      setError("Course title is required");
-      return;
+    // Client-side validation for create and edit operations
+    if (dialogType === "create" || dialogType === "edit") {
+      if (!formData.title.trim()) {
+        setError("Course title is required");
+        return;
+      }
+      if (!formData.description.trim()) {
+        setError("Course description is required");
+        return;
+      }
+      if (!formData.category_id) {
+        setError("Please select a category");
+        return;
+      }
     }
 
     setLoading(true);
@@ -135,7 +145,16 @@ const CourseDialog = ({
       handleDialogClose();
     } catch (error) {
       console.error(`Error ${dialogType}ing course:`, error);
-      setError(error.response?.data?.message || `Failed to ${dialogType} course`);
+      
+      // Parse detailed validation errors from backend
+      if (error.response?.data?.errors && Array.isArray(error.response.data.errors)) {
+        const errorMessages = error.response.data.errors.map(err => 
+          `${err.field}: ${err.message}`
+        ).join(', ');
+        setError(`Validation failed: ${errorMessages}`);
+      } else {
+        setError(error.response?.data?.message || `Failed to ${dialogType} course`);
+      }
     } finally {
       setLoading(false);
     }
@@ -192,9 +211,11 @@ const CourseDialog = ({
               value={formData.title}
               onChange={handleInputChange}
               autoFocus
+              helperText="Title must be at least 3 characters long"
             />
             <TextField
               margin="normal"
+              required
               fullWidth
               label="Description"
               name="description"
@@ -203,7 +224,7 @@ const CourseDialog = ({
               multiline
               rows={4}
             />
-            <FormControl fullWidth margin="normal">
+            <FormControl fullWidth margin="normal" required>
               <InputLabel>Category</InputLabel>
               <Select
                 name="category_id"

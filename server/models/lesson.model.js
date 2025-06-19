@@ -28,19 +28,88 @@ const LessonModel = {
   },
   
   // Update a lesson
-  async update(lessonId, { title, contentType, contentUrl, duration, orderNum }) {
-    const { rows: [updatedLesson] } = await query(
-      `UPDATE lessons
-       SET title = COALESCE($1, title),
-           content_type = COALESCE($2, content_type),
-           content_url = COALESCE($3, content_url),
-           duration = COALESCE($4, duration),
-           order_num = COALESCE($5, order_num)
-       WHERE id = $6
-       RETURNING *`,
-      [title, contentType, contentUrl, duration, orderNum, lessonId]
-    );
-    return updatedLesson;
+  async update(lessonId, { title, contentType, contentUrl, duration, orderNum, passingScore, timeLimit, maxAttempts, description, points, deadline }) {
+    // Start transaction
+    await query('BEGIN');
+    
+    try {
+      // Update the lesson
+      const { rows: [updatedLesson] } = await query(
+        `UPDATE lessons
+         SET title = COALESCE($1, title),
+             content_type = COALESCE($2, content_type),
+             content_url = COALESCE($3, content_url),
+             duration = COALESCE($4, duration),
+             order_num = COALESCE($5, order_num)
+         WHERE id = $6
+         RETURNING *`,
+        [title, contentType, contentUrl, duration, orderNum, lessonId]
+      );
+      
+      // Handle quiz-specific fields
+      if (contentType === 'quiz' && (passingScore !== undefined || timeLimit !== undefined || maxAttempts !== undefined)) {
+        // Check if quiz exists
+        const { rows: existingQuiz } = await query(
+          `SELECT id FROM quizzes WHERE lesson_id = $1`,
+          [lessonId]
+        );
+        
+        if (existingQuiz.length > 0) {
+          // Update existing quiz
+          await query(
+            `UPDATE quizzes
+             SET title = COALESCE($1, title),
+                 passing_score = COALESCE($2, passing_score),
+                 time_limit = COALESCE($3, time_limit),
+                 max_attempts = COALESCE($4, max_attempts)
+             WHERE lesson_id = $5`,
+            [title, passingScore, timeLimit, maxAttempts, lessonId]
+          );
+        } else {
+          // Create new quiz
+          await query(
+            `INSERT INTO quizzes (lesson_id, title, passing_score, time_limit, max_attempts)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [lessonId, title, passingScore || 70, timeLimit || 30, maxAttempts || 3]
+          );
+        }
+      }
+      
+      // Handle assignment-specific fields
+      if (contentType === 'assignment' && (description !== undefined || points !== undefined || deadline !== undefined)) {
+        // Check if assignment exists
+        const { rows: existingAssignment } = await query(
+          `SELECT id FROM assignments WHERE lesson_id = $1`,
+          [lessonId]
+        );
+        
+        if (existingAssignment.length > 0) {
+          // Update existing assignment
+          await query(
+            `UPDATE assignments
+             SET title = COALESCE($1, title),
+                 description = COALESCE($2, description),
+                 points = COALESCE($3, points),
+                 deadline = COALESCE($4, deadline)
+             WHERE lesson_id = $5`,
+            [title, description, points, deadline, lessonId]
+          );
+        } else {
+          // Create new assignment
+          await query(
+            `INSERT INTO assignments (lesson_id, title, description, points, deadline)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [lessonId, title, description || '', points || 100, deadline]
+          );
+        }
+      }
+      
+      await query('COMMIT');
+      return updatedLesson;
+    } catch (error) {
+      await query('ROLLBACK');
+      throw error;
+    }
   },
   
   // Delete a lesson

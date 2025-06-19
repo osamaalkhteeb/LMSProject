@@ -60,46 +60,8 @@ const UserManagement = () => {
     }
   };
 
-  const staticUsers = [
-{
-      id: 1,
-      name: "Ahmed Khaled",
-      email: "ahmed.khaled@example.com",
-      role: "Instructor",
-      joinDate: "2023-01-15",
-      status: "Active",
-      lastLogin: "2025-06-14",
-    },
-    {
-      id: 2,
-      name: "Nour Ahmad",
-      email: "nour.ahmad@example.com",
-      role: "Student",
-      joinDate: "2023-03-22",
-      status: "Active",
-      lastLogin: "2025-06-15",
-    },
-    {
-      id: 3,
-      name: "Mohammed Ali",
-      email: "mohammed.ali@example.com",
-      role: "Student",
-      joinDate: "2024-02-10",
-      status: "Suspended",
-      lastLogin: "2025-05-28",
-    },
-    {
-      id: 4,
-      name: "Sarah Johnson",
-      email: "sarah.j@example.com",
-      role: "Instructor",
-      joinDate: "2024-05-18",
-      status: "Pending",
-      lastLogin: "2025-06-10",
-    },  ];
-
-  // Use fetched users if available, otherwise fall back to static data
-  const displayUsers = users.length > 0 ? users : staticUsers;
+  // Use only real data from API
+  const displayUsers = users || [];
 
   const handleMenuClick = (event, item) => {
     setAnchorEl(event.currentTarget);
