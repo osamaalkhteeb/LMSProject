@@ -37,10 +37,13 @@ export const LessonController = {
   
   async update(req, res) {
     try {
-      const updatedLesson = await LessonModel.update(
-        req.params.lessonId,
-        req.body
-      );
+      const { title, contentType, contentUrl, duration } = req.body;
+      const updatedLesson = await LessonModel.update(req.params.lessonId, {
+        title,
+        content_type: contentType,
+        content_url: contentUrl,
+        duration
+      });
       
       if (!updatedLesson) {
         return res.status(HTTP_STATUS.NOT_FOUND).json(
@@ -50,6 +53,7 @@ export const LessonController = {
       
       res.json(createResponse(true, "Lesson updated", updatedLesson));
     } catch (error) {
+      console.error('❌ Error updating lesson:', error);
       res.status(HTTP_STATUS.SERVER_ERROR).json(
         createResponse(false, "Failed to update lesson")
       );

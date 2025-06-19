@@ -50,7 +50,7 @@ const CourseDetailView = ({ course, onBack }) => {
   const [openModuleDialog, setOpenModuleDialog] = useState(false);
   const [openEditModuleDialog, setOpenEditModuleDialog] = useState(false);
   const [openLessonDialog, setOpenLessonDialog] = useState(false);
-  const [openEditLessonDialog, setOpenEditLessonDialog] = useState(false);
+
   const [openQuizDialog, setOpenQuizDialog] = useState(false);
   const [openQuizManagementDialog, setOpenQuizManagementDialog] = useState(false);
   const [openAssignmentDialog, setOpenAssignmentDialog] = useState(false);
@@ -58,9 +58,15 @@ const CourseDetailView = ({ course, onBack }) => {
   const [selectedLessonId, setSelectedLessonId] = useState(null);
   const [selectedLessonForQuiz, setSelectedLessonForQuiz] = useState(null);
   const [editingModule, setEditingModule] = useState(null);
-  const [editingLesson, setEditingLesson] = useState(null);
+
   const [moduleForm, setModuleForm] = useState({ title: '', description: '' });
-  const [lessonForm, setLessonForm] = useState({ title: '', contentType: 'video', contentUrl: '', duration: 0 });
+  const [lessonForm, setLessonForm] = useState({ 
+    title: '', 
+    contentType: 'video', 
+    contentUrl: '', 
+    duration: 0,
+    orderNum: 1
+  });
   const [quizForm, setQuizForm] = useState({ title: '', passingScore: 50, timeLimit: 10, maxAttempts: 1 });
   const [assignmentForm, setAssignmentForm] = useState({ title: '', description: '', deadline: '', points: 100 });
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
@@ -88,7 +94,6 @@ const CourseDetailView = ({ course, onBack }) => {
       
       // Sort modules by orderNum
       const sortedModules = moduleData.sort((a, b) => (a.orderNum || 0) - (b.orderNum || 0));
-      
       setModules(sortedModules);
     } catch (error) {
       console.error('Error fetching course modules:', error);
@@ -238,6 +243,16 @@ const CourseDetailView = ({ course, onBack }) => {
   // Lesson CRUD handlers
   const handleCreateLesson = async () => {
     try {
+      // Validate contentUrl (required for all lesson types)
+      if (lessonForm.contentUrl) {
+        try {
+          new URL(lessonForm.contentUrl);
+        } catch {
+          setSnackbar({ open: true, message: 'Please enter a valid URL', severity: 'error' });
+          return;
+        }
+      }
+      
       const moduleIndex = modules.findIndex(module => module.id === selectedModuleId);
       const orderNum = modules[moduleIndex].lessons.length + 1;
       
@@ -252,7 +267,13 @@ const CourseDetailView = ({ course, onBack }) => {
       setModules(updatedModules);
       
       setOpenLessonDialog(false);
-      setLessonForm({ title: '', contentType: 'video', contentUrl: '', duration: 0 });
+      setLessonForm({ 
+         title: '', 
+         contentType: 'video', 
+         contentUrl: '', 
+         duration: 0,
+         orderNum: 1
+       });
       setSnackbar({ open: true, message: 'Lesson created successfully', severity: 'success' });
     } catch (error) {
       console.error('Error creating lesson:', error);
@@ -260,47 +281,9 @@ const CourseDetailView = ({ course, onBack }) => {
     }
   };
 
-  const handleEditLesson = (lessonId) => {
-    // Find the lesson across all modules
-    let foundLesson = null;
-    for (const module of modules) {
-      foundLesson = module.lessons.find(lesson => lesson.id === lessonId);
-      if (foundLesson) break;
-    }
-    
-    if (foundLesson) {
-      setEditingLesson(foundLesson);
-      setLessonForm({
-        title: foundLesson.title,
-        contentType: foundLesson.content_type || foundLesson.contentType,
-        contentUrl: foundLesson.content_url || foundLesson.contentUrl || '',
-        duration: foundLesson.duration || ''
-      });
-      setOpenEditLessonDialog(true);
-    }
-  };
 
-  const handleUpdateLesson = async () => {
-    try {
-      const updatedLesson = await updateLesson(course.id, editingLesson.id, lessonForm);
-      
-      const updatedModules = modules.map(module => ({
-        ...module,
-        lessons: module.lessons.map(lesson => 
-          lesson.id === editingLesson.id ? { ...lesson, ...updatedLesson } : lesson
-        )
-      }));
-      
-      setModules(updatedModules);
-      setOpenEditLessonDialog(false);
-      setEditingLesson(null);
-      setLessonForm({ title: '', contentType: 'video', contentUrl: '', duration: '' });
-      setSnackbar({ open: true, message: 'Lesson updated successfully', severity: 'success' });
-    } catch (error) {
-      console.error('Error updating lesson:', error);
-      setSnackbar({ open: true, message: 'Failed to update lesson', severity: 'error' });
-    }
-  };
+
+
 
   const handleDeleteLesson = async (lessonId) => {
     try {
@@ -493,7 +476,7 @@ const CourseDetailView = ({ course, onBack }) => {
                   setSelectedModuleId(moduleId);
                   setOpenLessonDialog(true);
                 }}
-                onEditLesson={handleEditLesson}
+    
                 onDeleteLesson={handleDeleteLesson}
                 onAddQuiz={(moduleId) => {
                   setSelectedModuleId(moduleId);
@@ -601,20 +584,19 @@ const CourseDetailView = ({ course, onBack }) => {
             sx={{ mb: 2 }}
           />
           <TextField
-            select
-            margin="dense"
-            label="Content Type"
-            fullWidth
-            variant="outlined"
-            value={lessonForm.contentType}
-            onChange={(e) => setLessonForm({ ...lessonForm, contentType: e.target.value })}
-            sx={{ mb: 2 }}
-            SelectProps={{ native: true }}
-          >
-            <option value="video">Video</option>
-            <option value="text">Text</option>
-            <option value="document">Document</option>
-          </TextField>
+              select
+              margin="dense"
+              label="Content Type"
+              fullWidth
+              variant="outlined"
+              value={lessonForm.contentType}
+              onChange={(e) => setLessonForm({ ...lessonForm, contentType: e.target.value })}
+              SelectProps={{ native: true }}
+              sx={{ mb: 2 }}
+            >
+              <option value="video">Video</option>
+              <option value="text">Text</option>
+            </TextField>
           <TextField
             margin="dense"
             label="Content URL"
@@ -622,6 +604,8 @@ const CourseDetailView = ({ course, onBack }) => {
             variant="outlined"
             value={lessonForm.contentUrl}
             onChange={(e) => setLessonForm({ ...lessonForm, contentUrl: e.target.value })}
+            required
+            helperText="Enter a valid URL (e.g., https://example.com/video.mp4)"
             sx={{ mb: 2 }}
           />
           <TextField
@@ -636,75 +620,17 @@ const CourseDetailView = ({ course, onBack }) => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenLessonDialog(false)}>Cancel</Button>
-          <Button onClick={handleCreateLesson} variant="contained" disabled={!lessonForm.title}>
+          <Button 
+             onClick={handleCreateLesson} 
+             variant="contained" 
+             disabled={!lessonForm.title || !lessonForm.contentUrl}
+           >
             Create Lesson
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Lesson Edit Dialog */}
-      <Dialog open={openEditLessonDialog} onClose={() => {
-        setOpenEditLessonDialog(false);
-        setEditingLesson(null);
-        setLessonForm({ title: '', contentType: 'video', contentUrl: '', duration: '' });
-      }} maxWidth="sm" fullWidth>
-        <DialogTitle>Edit Lesson</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Lesson Title"
-            fullWidth
-            variant="outlined"
-            value={lessonForm.title}
-            onChange={(e) => setLessonForm({ ...lessonForm, title: e.target.value })}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            select
-            margin="dense"
-            label="Content Type"
-            fullWidth
-            variant="outlined"
-            value={lessonForm.contentType}
-            onChange={(e) => setLessonForm({ ...lessonForm, contentType: e.target.value })}
-            sx={{ mb: 2 }}
-            SelectProps={{ native: true }}
-          >
-            <option value="video">Video</option>
-            <option value="text">Text</option>
-            <option value="document">Document</option>
-          </TextField>
-          <TextField
-            margin="dense"
-            label="Content URL"
-            fullWidth
-            variant="outlined"
-            value={lessonForm.contentUrl}
-            onChange={(e) => setLessonForm({ ...lessonForm, contentUrl: e.target.value })}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            margin="dense"
-            label="Duration (minutes)"
-            fullWidth
-            variant="outlined"
-            type="number"
-            value={lessonForm.duration}
-            onChange={(e) => setLessonForm({ ...lessonForm, duration: e.target.value })}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => {
-            setOpenEditLessonDialog(false);
-            setEditingLesson(null);
-            setLessonForm({ title: '', contentType: 'video', contentUrl: '', duration: '' });
-          }}>Cancel</Button>
-          <Button onClick={handleUpdateLesson} variant="contained" disabled={!lessonForm.title}>
-            Update Lesson
-          </Button>
-        </DialogActions>
-      </Dialog>
+
 
       {/* Quiz Creation Dialog */}
       <Dialog open={openQuizDialog} onClose={() => setOpenQuizDialog(false)} maxWidth="sm" fullWidth>
@@ -837,7 +763,6 @@ const CourseDetailView = ({ course, onBack }) => {
           <Button onClick={() => {
             setOpenQuizManagementDialog(false);
             setSelectedLessonForQuiz(null);
-            fetchCourseModules(); // Refresh to get updated data
           }}>
             Close
           </Button>

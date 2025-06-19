@@ -16,6 +16,9 @@ router.get('/', authenticate, LessonCompletionController.getCompletedLessons);
 // Get all completed lessons for the current user in a specific course
 router.get('/course/:courseId', authenticate, LessonCompletionController.getCompletedLessonsByCourse);
 
+// Get all completed lessons by course (for instructors/analytics)
+router.get('/course/:courseId/all', authenticate, authorize(['instructor', 'admin']), LessonCompletionController.getAllCompletedLessonsByCourse);
+
 // Check if a specific lesson is completed by the current user
 router.get('/lesson/:lessonId', authenticate, LessonCompletionController.checkLessonCompletion);
 

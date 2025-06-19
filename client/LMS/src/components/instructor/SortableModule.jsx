@@ -16,7 +16,6 @@ import {
 } from "@mui/material";
 import {
   DragIndicator as DragIcon,
-  Edit as EditIcon,
   Add as AddIcon,
   VideoLibrary,
   Assignment,
@@ -26,7 +25,8 @@ import {
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   Delete,
-  MoreVert
+  MoreVert,
+  Edit as EditIcon
 } from "@mui/icons-material";
 import { useSortable, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -43,7 +43,7 @@ import {
 } from "@dnd-kit/sortable";
 
 // SortableLesson component for draggable lessons
-const SortableLesson = ({ lesson, getLessonIcon, getLessonDetails, onEditLesson, onDeleteLesson, onManageQuiz }) => {
+const SortableLesson = ({ lesson, getLessonIcon, getLessonDetails, onDeleteLesson, onManageQuiz }) => {
   const {
     attributes,
     listeners,
@@ -103,15 +103,7 @@ const SortableLesson = ({ lesson, getLessonIcon, getLessonDetails, onEditLesson,
           <Quiz color="primary" />
         </IconButton>
       )}
-      <IconButton
-        size="small"
-        onClick={(e) => {
-          e.stopPropagation();
-          onEditLesson(lesson.id);
-        }}
-      >
-        <EditIcon />
-      </IconButton>
+
       <IconButton
         size="small"
         onClick={(e) => {
@@ -131,7 +123,6 @@ const SortableModule = ({
   onDeleteModule, 
   onEditModule,
   onAddLesson, 
-  onEditLesson,
   onDeleteLesson, 
   onAddQuiz, 
   onDeleteQuiz,
@@ -276,7 +267,7 @@ const SortableModule = ({
                         lesson={lesson}
                         getLessonIcon={getLessonIcon}
                         getLessonDetails={getLessonDetails}
-                        onEditLesson={onEditLesson}
+            
                         onDeleteLesson={onDeleteLesson}
                         onManageQuiz={onManageQuiz}
                       />

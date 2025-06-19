@@ -1,5 +1,5 @@
 import express from "express";
-import { AssignmentController } from "../controllers/assignment.controller.js";
+import AssignmentController from "../controllers/assignment.controller.js";
 import { authenticate, authorize, isCourseInstructorOrAdmin} from "../middleware/auth.js";
 import { validateRequest, schema } from "../middleware/validate.js";
 import { uploadDocument } from "../middleware/upload.js";
@@ -83,6 +83,14 @@ router.put(
   isCourseInstructorOrAdmin,
   validateRequest(schema.gradeSubmission),
   AssignmentController.gradeSubmission
+);
+
+// Get all assignments for instructor
+router.get(
+  "/instructor/assignments",
+  authenticate,
+  authorize(["instructor", "admin"]),
+  AssignmentController.getInstructorAssignments
 );
 
 // Delete submission (Student only - their own submission)

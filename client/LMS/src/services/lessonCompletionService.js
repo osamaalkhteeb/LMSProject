@@ -33,6 +33,17 @@ export const getCompletedLessonsByCourse = async (courseId) => {
   }
 };
 
+// Get all completed lessons by course (for instructors/analytics)
+export const getAllCompletedLessonsByCourse = async (courseId) => {
+  try {
+    const response = await apiClient.get(`/lesson-completions/course/${courseId}/all`);
+    return response.data?.data || response.data;
+  } catch (error) {
+    console.error('Error fetching all completed lessons by course:', error);
+    throw error;
+  }
+};
+
 // Unmark a lesson as complete
 export const unmarkLessonComplete = async (lessonId) => {
   try {

@@ -345,8 +345,6 @@ const QuizManagement = ({ lessonId, lessonTitle }) => {
                   <TableCell>Quiz Title</TableCell>
                   <TableCell>Questions</TableCell>
                   <TableCell>Time Limit</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Created</TableCell>
                   <TableCell align="right">Actions</TableCell>
                 </TableRow>
               </TableHead>
@@ -385,18 +383,7 @@ const QuizManagement = ({ lessonId, lessonTitle }) => {
                         </Typography>
                       )}
                     </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={quiz.is_active ? 'Active' : 'Inactive'}
-                        color={quiz.is_active ? 'success' : 'default'}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" color="text.secondary">
-                        {quiz.created_at ? format(new Date(quiz.created_at), 'MMM dd, yyyy') : 'N/A'}
-                      </Typography>
-                    </TableCell>
+
                     <TableCell align="right">
                       <Button
                         variant="outlined"

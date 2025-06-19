@@ -5,18 +5,39 @@ import {
   Paper,
   Grid,
   Card,
-  CardContent
+  CardContent,
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import { FiTrendingUp, FiUsers, FiBookOpen, FiDollarSign } from 'react-icons/fi';
+import { useAdminAnalytics } from '../../hooks/useAnalytics';
 
 const AnalyticsTab = () => {
-  // Mock analytics data for admin dashboard
-  const analyticsData = {
-    totalRevenue: '$45,230',
-    totalUsers: '1,234',
-    totalCourses: '89',
-    growthRate: '+12.5%'
-  };
+  const { analytics, loading, error } = useAdminAnalytics();
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight={300}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert severity="error" sx={{ mb: 2 }}>
+        {error}
+      </Alert>
+    );
+  }
+
+  if (!analytics) {
+    return (
+      <Alert severity="info" sx={{ mb: 2 }}>
+        No analytics data available.
+      </Alert>
+    );
+  }
 
   const StatCard = ({ title, value, icon: Icon, color }) => (
     <Card sx={{ height: '100%' }}>
@@ -45,16 +66,8 @@ const AnalyticsTab = () => {
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Total Revenue"
-            value={analyticsData.totalRevenue}
-            icon={FiDollarSign}
-            color="#4caf50"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
             title="Total Users"
-            value={analyticsData.totalUsers}
+            value={analytics.totalUsers}
             icon={FiUsers}
             color="#2196f3"
           />
@@ -62,7 +75,7 @@ const AnalyticsTab = () => {
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title="Total Courses"
-            value={analyticsData.totalCourses}
+            value={analytics.totalCourses}
             icon={FiBookOpen}
             color="#ff9800"
           />
@@ -70,7 +83,7 @@ const AnalyticsTab = () => {
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title="Growth Rate"
-            value={analyticsData.growthRate}
+            value={analytics.growthRate}
             icon={FiTrendingUp}
             color="#9c27b0"
           />

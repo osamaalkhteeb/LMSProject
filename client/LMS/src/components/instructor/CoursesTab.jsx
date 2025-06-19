@@ -12,10 +12,10 @@ import {
   CircularProgress,
   Alert
 } from "@mui/material";
-import { Add as AddIcon, Edit as EditIcon, People as PeopleIcon, MoreVert as MoreIcon } from "@mui/icons-material";
+import { Add as AddIcon, Edit as EditIcon, People as PeopleIcon, MoreVert as MoreIcon, Visibility as VisibilityIcon } from "@mui/icons-material";
 import { getInstructorCourses, publishCourse } from "../../services/courseService";
 
-const CoursesTab = ({ courses: propCourses, loading: propLoading, error: propError, onRefresh, handleDialogOpen, handleMenuClick, handleCourseClick }) => {
+const CoursesTab = ({ courses: propCourses, loading: propLoading, error: propError, onRefresh, handleDialogOpen, handleMenuClick, handleCourseClick, handleViewStudents }) => {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -132,7 +132,18 @@ const CoursesTab = ({ courses: propCourses, loading: propLoading, error: propErr
                   )}
                 </CardContent>
 
-                <CardActions sx={{ justifyContent: "flex-end", px: 2, pb: 2 }}>
+                <CardActions sx={{ justifyContent: "space-between", px: 2, pb: 2 }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<VisibilityIcon />}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleViewStudents && handleViewStudents(course);
+                    }}
+                  >
+                    View Students
+                  </Button>
                   <IconButton
                     onClick={(e) => handleMenuClick && handleMenuClick(e, course)}
                     size="small"

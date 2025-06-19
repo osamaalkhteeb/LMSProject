@@ -92,10 +92,14 @@ export const schema = {
 
   // Course schemas
   createCourse: Joi.object({
-    title: Joi.string().min(5).max(150).required(),
-    description: Joi.string().min(10).max(1000).required(),
-    category_id: Joi.number().integer().positive().required(),
-    thumbnail_url: Joi.string().uri().optional().allow(""),
+    title: Joi.string().min(3).max(150).required(),
+    description: Joi.string().min(3).max(1000).required(),
+    category_id: Joi.alternatives().try(
+      Joi.number().integer().positive(),
+      Joi.string().pattern(/^\d+$/).custom((value) => parseInt(value, 10))
+    ).required(),
+    thumbnail_url: Joi.string().optional().allow(""),
+    thumbnail_image: Joi.string().optional().allow(""),
   }),
 
   updateCourse: Joi.object({

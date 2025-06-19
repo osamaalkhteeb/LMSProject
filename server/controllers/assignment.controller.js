@@ -6,7 +6,7 @@ import { HTTP_STATUS } from "../config/constants.js";
 import { createResponse } from "../utils/helper.js";
 import { uploadDocument, deleteDocument } from "../config/cloudinary.js";
 
-export const AssignmentController = {
+const AssignmentController = {
   // Create a new assignment
   async create(req, res) {
     try {
@@ -231,6 +231,20 @@ export const AssignmentController = {
     }
   },
   
+  // Get all assignments for an instructor
+  async getInstructorAssignments(req, res) {
+    try {
+      const instructorId = req.user.id;
+      const assignments = await AssignmentModel.getInstructorAssignments(instructorId);
+      res.json(createResponse(true, "Instructor assignments retrieved successfully", assignments));
+    } catch (error) {
+      console.error("Error getting instructor assignments:", error);
+      res.status(HTTP_STATUS.SERVER_ERROR).json(
+        createResponse(false, "Failed to get assignments")
+      );
+    }
+  },
+
   // Get submissions for an assignment
   async getSubmissions(req, res) {
     try {
@@ -307,7 +321,7 @@ export const AssignmentController = {
       // If there's a file uploaded to Cloudinary, delete it
       if (userSubmission.submission_url && userSubmission.submission_url.includes('cloudinary.com')) {
         try {
-          console.log('Submission URL:', userSubmission.submission_url);
+
           
           // Extract public ID from Cloudinary URL
           // URL format: https://res.cloudinary.com/cloud_name/raw/upload/v1234567890/folder/public_id.ext
@@ -322,15 +336,8 @@ export const AssignmentController = {
               const publicIdWithExt = versionMatch[1];
               const publicId = publicIdWithExt.replace(/\.[^/.]+$/, '');
               
-              console.log('Extracted public ID:', publicId);
-              
               const deleteResult = await deleteDocument(publicId);
-              console.log('Cloudinary deletion result:', deleteResult);
-            } else {
-              console.log('Could not parse version from URL');
             }
-          } else {
-            console.log('Invalid Cloudinary URL format');
           }
         } catch (cloudinaryError) {
           console.error('Error deleting file from Cloudinary:', cloudinaryError);
@@ -367,3 +374,5 @@ export const AssignmentController = {
     }
   }
 };
+
+export default AssignmentController;

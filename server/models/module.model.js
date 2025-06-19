@@ -23,12 +23,16 @@ const ModuleModel = {
 
     // Populate lessons, assignments, and quizzes for each module
     for (const module of modules) {
-      // Get lessons
+      // Get lessons with quiz and assignment data
       const { rows: lessons } = await query(
-        `SELECT id, title, content_type, content_url, duration
-         FROM lessons 
-         WHERE module_id = $1
-         ORDER BY order_num`,
+        `SELECT l.id, l.title, l.content_type, l.content_url, l.duration, l.order_num,
+                q.passing_score, q.time_limit, q.max_attempts,
+                a.description, a.deadline
+         FROM lessons l
+         LEFT JOIN quizzes q ON l.id = q.lesson_id AND l.content_type = 'quiz'
+         LEFT JOIN assignments a ON l.id = a.lesson_id AND l.content_type = 'assignment'
+         WHERE l.module_id = $1
+         ORDER BY l.order_num`,
         [module.id]
       );
       
@@ -68,12 +72,16 @@ const ModuleModel = {
     );
     
     if (module) {
-      // Get lessons
+      // Get lessons with quiz and assignment data
       const { rows: lessons } = await query(
-        `SELECT id, title, content_type, content_url, duration
-         FROM lessons 
-         WHERE module_id = $1
-         ORDER BY order_num`,
+        `SELECT l.id, l.title, l.content_type, l.content_url, l.duration, l.order_num,
+                q.passing_score, q.time_limit, q.max_attempts,
+                a.description, a.deadline
+         FROM lessons l
+         LEFT JOIN quizzes q ON l.id = q.lesson_id AND l.content_type = 'quiz'
+         LEFT JOIN assignments a ON l.id = a.lesson_id AND l.content_type = 'assignment'
+         WHERE l.module_id = $1
+         ORDER BY l.order_num`,
         [module.id]
       );
       module.lessons = lessons;

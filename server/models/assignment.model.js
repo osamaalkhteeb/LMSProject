@@ -170,8 +170,18 @@ const AssignmentModel = {
   async getSubmissions(assignmentId) {
     try {
       const { rows } = await query(
-        `SELECT s.*, u.name as user_name, u.email
-         FROM submissions s
+        `SELECT 
+           s.id,
+           s.user_id,
+           s.assignment_id,
+           s.submission_url,
+           s.submitted_at,
+           s.grade,
+           s.feedback,
+           s.graded_at,
+           u.name as user_name,
+           u.email as user_email
+         FROM assignment_submissions s
          JOIN users u ON s.user_id = u.id
          WHERE s.assignment_id = $1
          ORDER BY s.submitted_at DESC`,
@@ -179,7 +189,7 @@ const AssignmentModel = {
       );
       return rows;
     } catch (error) {
-      console.error("Error getting submissions:", error);
+      console.error('Error getting assignment submissions:', error);
       throw error;
     }
   },
@@ -215,6 +225,34 @@ const AssignmentModel = {
       return rows[0];
     } catch (error) {
       console.error("Error grading submission:", error);
+      throw error;
+    }
+  },
+
+  // Get all assignments for an instructor
+  async getInstructorAssignments(instructorId) {
+    try {
+      const { rows } = await query(
+        `SELECT a.*, 
+               l.title as lesson_title, 
+               m.title as module_title, 
+               c.title as course_title,
+               c.id as course_id,
+               COUNT(s.id) as submission_count,
+               COUNT(CASE WHEN s.grade IS NOT NULL THEN 1 END) as graded_count
+         FROM assignments a
+         JOIN lessons l ON a.lesson_id = l.id
+         JOIN modules m ON l.module_id = m.id
+         JOIN courses c ON m.course_id = c.id
+         LEFT JOIN submissions s ON a.id = s.assignment_id
+         WHERE c.instructor_id = $1
+         GROUP BY a.id, l.title, m.title, c.title, c.id
+         ORDER BY a.deadline DESC`,
+        [instructorId]
+      );
+      return rows;
+    } catch (error) {
+      console.error("Error getting instructor assignments:", error);
       throw error;
     }
   },
