@@ -1,4 +1,4 @@
-import apiClient from "./apiClient.js";
+import apiClient from './apiClient';
 
 // Create a new module
 export const createModule = async (courseId, moduleData) => {
@@ -23,9 +23,9 @@ export const getModulesByCourse = async (courseId) => {
 };
 
 // Get a specific module by ID
-export const getModuleById = async (courseId, moduleId) => {
+export const getModuleById = async (moduleId) => {
   try {
-    const response = await apiClient.get(`/modules/courses/${courseId}/modules/${moduleId}`);
+    const response = await apiClient.get(`/modules/modules/${moduleId}`);
     return response.data?.data || response.data;
   } catch (error) {
     console.error(`Error fetching module ${moduleId}:`, error);
@@ -49,6 +49,17 @@ export const updateModuleWithCourse = async (courseId, moduleId, moduleData) => 
   return updateModule(courseId, moduleId, moduleData);
 };
 
+// Update module without course context (for simple updates)
+export const updateModuleSimple = async (moduleId, moduleData) => {
+  try {
+    const response = await apiClient.put(`/modules/modules/${moduleId}`, moduleData);
+    return response.data?.data || response.data;
+  } catch (error) {
+    console.error(`Error updating module ${moduleId}:`, error);
+    throw error;
+  }
+};
+
 // Delete a module
 export const deleteModule = async (courseId, moduleId) => {
   try {
@@ -66,5 +77,6 @@ export default {
   getModuleById,
   updateModule,
   updateModuleWithCourse,
+  updateModuleSimple,
   deleteModule
 };

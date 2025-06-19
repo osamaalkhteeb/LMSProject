@@ -24,8 +24,9 @@ export const ModuleController = {
   async getByCourse(req, res) {
     try {
       const modules = await ModuleModel.getModulesByCourseId(req.params.courseId);
-      res.json(createResponse(true, "Modules retrieved", modules));
+        res.json(createResponse(true, "Modules retrieved", modules));
     } catch (error) {
+      console.error('❌ Error in ModuleController.getByCourse:', error);
       res.status(HTTP_STATUS.SERVER_ERROR).json(
         createResponse(false, "Failed to fetch modules")
       );

@@ -160,9 +160,9 @@ export const schema = {
     contentUrl: Joi.string().uri().when("contentType", {
       is: Joi.string().valid("video", "text"),
       then: Joi.required(),
-      otherwise: Joi.optional(),
+      otherwise: Joi.optional().allow(""),
     }),
-    duration: Joi.number().integer().min(1).optional(),
+    duration: Joi.number().integer().min(0).optional(),
     orderNum: Joi.number().integer().min(1).required(),
   }),
 
@@ -208,7 +208,7 @@ export const schema = {
         })
       )
       .min(1)
-      .required(),
+      .optional(),
   }),
 
   updateQuiz: Joi.object({

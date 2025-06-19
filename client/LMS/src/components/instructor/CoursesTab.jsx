@@ -92,7 +92,7 @@ const CoursesTab = ({ courses: propCourses, loading: propLoading, error: propErr
           {courses.map((course) => (
             <Grid item xs={12} md={6} lg={4} key={course.id}>
               <Card sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-                <Box sx={{ position: "relative" }}>
+                <Box sx={{ position: "relative", cursor: 'pointer' }} onClick={() => handleCourseClick && handleCourseClick(course)}>
                   <img
                     src={course.thumbnail_url || '/api/placeholder/300/200'}
                     alt={course.title}
@@ -132,14 +132,7 @@ const CoursesTab = ({ courses: propCourses, loading: propLoading, error: propErr
                   )}
                 </CardContent>
 
-                <CardActions sx={{ justifyContent: "space-between", px: 2, pb: 2 }}>
-                  <Button 
-                    size="small" 
-                    startIcon={<EditIcon />}
-                    onClick={() => handleDialogOpen && handleDialogOpen("edit", course)}
-                  >
-                    Edit
-                  </Button>
+                <CardActions sx={{ justifyContent: "flex-end", px: 2, pb: 2 }}>
                   <IconButton
                     onClick={(e) => handleMenuClick && handleMenuClick(e, course)}
                     size="small"

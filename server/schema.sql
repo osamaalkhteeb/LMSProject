@@ -113,7 +113,7 @@ CREATE TABLE quizzes (
     lesson_id INTEGER REFERENCES lessons(id),
     title VARCHAR(150),
     passing_score INTEGER DEFAULT 50,
-    time_limit INTEGER -- in minutes, NULL means no time limit
+    time_limit INTEGER, -- in minutes, NULL means no time limit
     max_attempts INTEGER DEFAULT 1
 );
 
@@ -140,7 +140,7 @@ CREATE TABLE quiz_options (
 CREATE TABLE quiz_results (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id),
-    quiz_id INTEGER REFERENCES quizzes(id),
+    quiz_id INTEGER REFERENCES quizzes(id) ON DELETE CASCADE,
     score INTEGER CHECK (score BETWEEN 0 AND 100),
     attempt_number INTEGER DEFAULT 1,
     started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,

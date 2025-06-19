@@ -4,8 +4,8 @@ const LessonCompletionModel = {
   async markComplete(userId, lessonId) {
     try {
       const { rows } = await query(
-        `INSERT INTO lesson_completions (user_id, lesson_id)
-         VALUES ($1, $2)
+        `INSERT INTO lesson_completions (user_id, lesson_id, completed_at)
+         VALUES ($1, $2, CURRENT_TIMESTAMP)
          ON CONFLICT (user_id, lesson_id) DO NOTHING
          RETURNING *`,
         [userId, lessonId]

@@ -157,7 +157,7 @@ const CourseApprovals = () => {
                       <TableCell>
                         <Box display="flex" alignItems="center" gap={2}>
                           <Avatar
-                            src={course.thumbnail_url}
+                            src={course.thumbnail_url ? `${course.thumbnail_url}?t=${Date.now()}` : course.thumbnail_url}
                             alt={course.title || course.name}
                             variant="rounded"
                             sx={{ width: 60, height: 40 }}

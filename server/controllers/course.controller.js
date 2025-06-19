@@ -7,15 +7,29 @@ export const CourseController = {
   // Create course (Instructor only)
   async createCourse(req, res) {
     try {
-      const { title, description, category_id, thumbnail_url } = req.body;
+      const { title, description, category_id, thumbnail_image } = req.body;
       const instructor_id = req.user.id;
+      
+      let thumbnail_url = null;
+      
+      // Upload image to cloudinary if provided
+      if (thumbnail_image) {
+        const uploadResult = await uploadImage(thumbnail_image, {
+          folder: 'lms_courses',
+          transformation: [
+            { width: 800, height: 600, crop: 'fill' },
+            { quality: 'auto' }
+          ]
+        });
+        thumbnail_url = uploadResult.secure_url;
+      }
 
       const course = await CourseModel.createCourse({
         title,
         description,
-        instructor_id,
-        category_id,
-        thumbnail_url,
+        instructorId: instructor_id,
+        categoryId: category_id,
+        thumbnailUrl: thumbnail_url,
       });
 
       res
@@ -52,6 +66,34 @@ export const CourseController = {
         return res
           .status(HTTP_STATUS.FORBIDDEN)
           .json(createResponse(false, "You can only update your own courses"));
+      }
+
+      // Handle image update
+      if (updates.thumbnail_image) {
+        // Delete old image if exists
+        if (existingCourse.thumbnail_url) {
+          try {
+            // Extract public_id from cloudinary URL
+            const urlParts = existingCourse.thumbnail_url.split('/');
+            const publicIdWithExtension = urlParts[urlParts.length - 1];
+            const publicId = `lms_courses/${publicIdWithExtension.split('.')[0]}`;
+            await deleteImage(publicId);
+          } catch (deleteError) {
+            console.error("Error deleting old image:", deleteError);
+            // Continue with update even if old image deletion fails
+          }
+        }
+        
+        // Upload new image
+        const uploadResult = await uploadImage(updates.thumbnail_image, {
+          folder: 'lms_courses',
+          transformation: [
+            { width: 800, height: 600, crop: 'fill' },
+            { quality: 'auto' }
+          ]
+        });
+        updates.thumbnail_url = uploadResult.secure_url;
+        delete updates.thumbnail_image; // Remove the base64 data from updates
       }
 
       // Remove fields that shouldn't be updated by instructors
@@ -100,6 +142,20 @@ export const CourseController = {
         return res
           .status(HTTP_STATUS.FORBIDDEN)
           .json(createResponse(false, "You can only delete your own courses"));
+      }
+
+      // Delete image from cloudinary if exists
+      if (existingCourse.thumbnail_url) {
+        try {
+          // Extract public_id from cloudinary URL
+          const urlParts = existingCourse.thumbnail_url.split('/');
+          const publicIdWithExtension = urlParts[urlParts.length - 1];
+          const publicId = `lms_courses/${publicIdWithExtension.split('.')[0]}`;
+          await deleteImage(publicId);
+        } catch (deleteError) {
+          console.error("Error deleting course image:", deleteError);
+          // Continue with course deletion even if image deletion fails
+        }
       }
 
       await CourseModel.deleteCourse(id);

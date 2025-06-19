@@ -74,8 +74,18 @@ export const QuizController = {
       // Get quiz details to find the associated lesson
       const quiz = await QuizModel.getById(quizId);
       
-      // Note: Quiz completion is now tracked separately via quiz_results table
-      // No longer marking lesson as complete for quizzes
+      // If quiz is passed, mark the associated lesson as complete
+      if (result.passed && quiz.lesson_id) {
+        const LessonCompletionModel = require('../models/lessonCompletion.model');
+        try {
+          await LessonCompletionModel.markComplete(req.user.id, quiz.lesson_id);
+        } catch (error) {
+          // Ignore if already completed
+          if (!error.message.includes('already completed')) {
+            console.error('Error marking quiz lesson as complete:', error);
+          }
+        }
+      }
 
       // Update course progress
       await EnrollmentModel.updateProgress(enrollment.id);

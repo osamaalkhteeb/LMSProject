@@ -62,12 +62,57 @@ const CourseModel = {
   // Delete course (Instructor/Admin)
   async deleteCourse(id) {
     try {
+      // Start transaction
+      await query("BEGIN");
+      
+      // Delete lesson completions first
+      await query(
+        "DELETE FROM lesson_completions WHERE lesson_id IN (SELECT l.id FROM lessons l JOIN modules m ON l.module_id = m.id WHERE m.course_id = $1)",
+        [id]
+      );
+      
+      // Delete assignments and submissions
+      await query(
+        "DELETE FROM submissions WHERE assignment_id IN (SELECT a.id FROM assignments a JOIN lessons l ON a.lesson_id = l.id JOIN modules m ON l.module_id = m.id WHERE m.course_id = $1)",
+        [id]
+      );
+      
+      await query(
+        "DELETE FROM assignments WHERE lesson_id IN (SELECT l.id FROM lessons l JOIN modules m ON l.module_id = m.id WHERE m.course_id = $1)",
+        [id]
+      );
+      
+      // Delete lessons
+      await query(
+        "DELETE FROM lessons WHERE module_id IN (SELECT id FROM modules WHERE course_id = $1)",
+        [id]
+      );
+      
+      // Delete modules
+      await query(
+        "DELETE FROM modules WHERE course_id = $1",
+        [id]
+      );
+      
+      // Delete enrollments
+      await query(
+        "DELETE FROM enrollments WHERE course_id = $1",
+        [id]
+      );
+      
+      // Finally delete the course
       const { rows } = await query(
         "DELETE FROM courses WHERE id = $1 RETURNING *",
         [id]
       );
+      
+      // Commit transaction
+      await query("COMMIT");
+      
       return rows[0];
     } catch (error) {
+      // Rollback transaction on error
+      await query("ROLLBACK");
       console.error("Error deleting course:", error);
       throw error;
     }
@@ -110,10 +155,10 @@ const CourseModel = {
     try {
       let baseQuery = `
         SELECT c.*, 
-               u.name as instructor_name, 
-               u.avatar_url as instructor_avatar,
-               cat.name as category_name,
-               COUNT(e.id) as enrolled_count
+              u.name as instructor_name, 
+              u.avatar_url as instructor_avatar,
+              cat.name as category_name,
+              COUNT(e.id) as enrolled_count
         FROM courses c
         LEFT JOIN users u ON c.instructor_id = u.id
         LEFT JOIN categories cat ON c.category_id = cat.id

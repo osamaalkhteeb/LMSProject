@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Box, Grid, Paper, Tabs, Tab, Container, CircularProgress, Typography } from "@mui/material";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import StudentProfile from "../../components/student/StudentProfile";
@@ -48,19 +48,27 @@ const StudentDashboard = () => {
     studyStreak: enrollments?.filter(enrollment => enrollment.progress > 0)?.length || 0,
   };
 
-  // Transform enrollment data to match the expected course structure
-  const enrolledCourses = enrollments?.map(enrollment => ({
-    id: enrollment.course_id,
-    name: enrollment.title || 'Unknown Course',
-    instructor: enrollment.instructor_name || 'Unknown Instructor',
-    progress: enrollment.progress || 0,
-    thumbnail: enrollment.thumbnail_url || '',
-    description: enrollment.description || '',
-    modules: [],
-    enrollmentId: enrollment.id,
-    enrolledAt: enrollment.enrolled_at,
-    completedAt: enrollment.completed_at
-  })) || [];
+  // Transform enrollment data to match the expected course structure - memoized to prevent re-renders
+  const enrolledCourses = useMemo(() => {
+    return enrollments?.map(enrollment => ({
+      id: enrollment.course_id,
+      name: enrollment.title || 'Unknown Course',
+      instructor: enrollment.instructor_name || 'Unknown Instructor',
+      progress: enrollment.progress || 0,
+      thumbnail: enrollment.thumbnail_url || '',
+      description: enrollment.description || '',
+      modules: [],
+      enrollmentId: enrollment.id,
+      enrolledAt: enrollment.enrolled_at,
+      completedAt: enrollment.completed_at
+    })) || [];
+  }, [enrollments]);
+
+  // Create a memoized course object to prevent unnecessary re-renders - MOVED OUTSIDE CONDITIONAL
+  const courseWithModules = useMemo(() => ({
+    ...selectedCourse,
+    modules: courseModules || []
+  }), [selectedCourse, courseModules]);
 
   // Handle tab parameter from URL
   useEffect(() => {
@@ -81,14 +89,11 @@ const StudentDashboard = () => {
     }
   };
 
-  const handleCourseSelect = (course) => {
-    setSelectedCourse({
-      ...course,
-      modules: []
-    });
+  const handleCourseSelect = useCallback((course) => {
+    setSelectedCourse(course);
     setCurrentLesson(null);
     setCurrentVideo(null);
-  };
+  }, []);
 
   const handleProgressUpdate = (newProgress) => {
     if (selectedCourse) {
@@ -169,10 +174,7 @@ const StudentDashboard = () => {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <CourseDetailsView
-          selectedCourse={{
-            ...selectedCourse,
-            modules: courseModules || []  // Use the fetched modules data
-          }}
+          selectedCourse={courseWithModules}
           onBack={handleBackToDashboard}
           onProgressUpdate={handleProgressUpdate}
           currentVideo={currentVideo}

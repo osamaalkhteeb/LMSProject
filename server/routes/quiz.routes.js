@@ -16,7 +16,7 @@ router.get(
 // Get quiz details
 router.get("/:quizId", 
   authenticate, 
-  authorize(["student"]), 
+  authorize(["student", "instructor", "admin"]), 
   validateRequest(schema.quizId, "params"),
   QuizController.getQuiz
 );

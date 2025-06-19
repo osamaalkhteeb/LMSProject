@@ -518,7 +518,7 @@ const QuizModel = {
                 `INSERT INTO quiz_options
                  (question_id, option_text, is_correct, order_num)
                  VALUES ($1, $2, $3, $4)`,
-                [createdQuestion.id, option.text, option.isCorrect, j + 1]
+                [createdQuestion.id, option.option_text, option.is_correct, j + 1]
               );
             }
           }
@@ -560,9 +560,9 @@ const QuizModel = {
             // Update existing question
             await query(
               `UPDATE quiz_questions
-               SET question_text = $1, question_type = $2, points = $3
-               WHERE id = $4 AND quiz_id = $5`,
-              [question.text, question.type, question.points, question.id, quizId]
+               SET question_text = $1, question_type = $2, points = $3, order_num = $4
+               WHERE id = $5 AND quiz_id = $6`,
+              [question.question_text, question.question_type, question.points, question.orderNum, question.id, quizId]
             );
             
             // Handle options for this question
@@ -593,14 +593,14 @@ const QuizModel = {
                     `UPDATE quiz_options
                      SET option_text = $1, is_correct = $2
                      WHERE id = $3`,
-                    [option.text, option.isCorrect, option.id]
+                    [option.option_text, option.is_correct, option.id]
                   );
                 } else {
                   // Insert new option
                   await query(
                     `INSERT INTO quiz_options (question_id, option_text, is_correct)
                      VALUES ($1, $2, $3)`,
-                    [question.id, option.text, option.isCorrect]
+                    [question.id, option.option_text, option.is_correct]
                   );
                 }
               }
@@ -609,10 +609,10 @@ const QuizModel = {
             // Insert new question
             const { rows: [createdQuestion] } = await query(
               `INSERT INTO quiz_questions 
-               (quiz_id, question_text, question_type, points)
-               VALUES ($1, $2, $3, $4)
+               (quiz_id, question_text, question_type, points, order_num)
+               VALUES ($1, $2, $3, $4, $5)
                RETURNING id`,
-              [quizId, question.text, question.type, question.points]
+              [quizId, question.question_text, question.question_type, question.points, question.orderNum]
             );
             
             // Create options for this question
@@ -623,7 +623,7 @@ const QuizModel = {
                   `INSERT INTO quiz_options
                    (question_id, option_text, is_correct, order_num)
                    VALUES ($1, $2, $3, $4)`,
-                  [createdQuestion.id, option.text, option.isCorrect, j + 1]
+                  [createdQuestion.id, option.option_text, option.is_correct, j + 1]
                 );
               }
             }

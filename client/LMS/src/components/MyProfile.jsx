@@ -49,8 +49,9 @@ const MyProfile = () => {
       setUpdateError('');
       setUpdateSuccess('');
       
-      // Update profile data (only bio)
+      // Update profile data (include required name field)
       await updateProfile({
+        name: profile.name,
         bio: tempBio
       });
       
@@ -162,7 +163,7 @@ const MyProfile = () => {
         <Box sx={{ position: 'relative', display: 'inline-block' }}>
           <Avatar
             alt={profile.name}
-            src={selectedFile ? URL.createObjectURL(selectedFile) : profile.avatar_url?.trim().replace(/`/g, '')}
+            src={selectedFile ? URL.createObjectURL(selectedFile) : (profile.avatar_url ? `${profile.avatar_url.trim().replace(/`/g, '')}?t=${Date.now()}` : profile.avatar_url)}
             sx={{
               width: 120,
               height: 120,

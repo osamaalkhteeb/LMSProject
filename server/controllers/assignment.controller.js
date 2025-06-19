@@ -201,8 +201,24 @@ export const AssignmentController = {
         submissionUrl
       });
       
-      // Note: Assignment completion is now tracked separately via submissions table
-      // No longer marking lesson as complete for assignments
+      // Mark the associated lesson as complete when assignment is submitted
+      const assignmentData = await AssignmentModel.getById(id);
+      if (assignmentData && assignmentData.lesson_id) {
+        try {
+          await LessonCompletionModel.markComplete(userId, assignmentData.lesson_id);
+        } catch (error) {
+          // Ignore if already completed
+          if (!error.message.includes('already completed')) {
+            console.error('Error marking assignment lesson as complete:', error);
+          }
+        }
+      }
+      
+      // Update course progress
+      const enrollment = await EnrollmentModel.getByUserAndCourse(userId, assignmentData.course_id);
+      if (enrollment) {
+        await EnrollmentModel.updateProgress(enrollment.id);
+      }
       
       res.status(HTTP_STATUS.CREATED).json(
         createResponse(true, "Assignment submitted successfully", submission)
