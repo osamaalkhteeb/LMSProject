@@ -31,6 +31,7 @@ const ModuleModel = {
          ORDER BY order_num`,
         [module.id]
       );
+      
       module.lessons = lessons;
       
       // Get assignments for this module (only from lessons with assignment content_type)
@@ -44,15 +45,16 @@ const ModuleModel = {
       );
       module.assignments = assignments;
       
-      // Get quizzes for this module (only from lessons with quiz content_type)
+      // Get quizzes for this module (from any lesson in the module)
       const { rows: quizzes } = await query(
-        `SELECT q.id, q.title, q.lesson_id
+        `SELECT q.id, q.title, q.lesson_id, l.title as lesson_title
          FROM quizzes q
          JOIN lessons l ON q.lesson_id = l.id
-         WHERE l.module_id = $1 AND l.content_type = 'quiz'
-         ORDER BY q.id`,
+         WHERE l.module_id = $1
+         ORDER BY l.order_num, q.id`,
         [module.id]
       );
+      
       module.quizzes = quizzes;
     }
     return modules;

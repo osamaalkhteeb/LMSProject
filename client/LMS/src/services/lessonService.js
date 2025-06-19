@@ -1,12 +1,16 @@
 import apiClient from './apiClient.js';
 
 // Create lesson (Instructor/Admin only)
-export const createLesson = async (moduleId, lessonData) => {
+export const createLesson = async (courseId, moduleId, lessonData) => {
   try {
-    const response = await apiClient.post(`/lessons/modules/${moduleId}/lessons`, lessonData);
+    console.log('Creating lesson with data:', { courseId, moduleId, lessonData });
+    const response = await apiClient.post(`/lessons/courses/${courseId}/modules/${moduleId}/lessons`, lessonData);
+    console.log('Lesson creation response:', response.data);
     return response.data?.data || response.data;
   } catch (error) {
     console.error('Error creating lesson:', error);
+    console.error('Error response:', error.response?.data);
+    console.error('Error status:', error.response?.status);
     throw error;
   }
 };
@@ -17,8 +21,16 @@ export const getLessonsByCourse = async (courseId) => {
     const response = await apiClient.get(`/modules/courses/${courseId}/modules`);
     const modules = response.data?.data || [];
     // Extract lessons from all modules
-    const lessons = modules.flatMap(module => module.lessons || []);
-    return lessons;
+    const allLessons = modules.flatMap(module => module.lessons || []);
+    
+    // Deduplicate lessons by ID to prevent duplicate quiz fetching
+    const uniqueLessons = allLessons.filter((lesson, index, array) => 
+      array.findIndex(l => l.id === lesson.id) === index
+    );
+    
+  
+    
+    return uniqueLessons;
   } catch (error) {
     console.error(`Error fetching lessons for course ${courseId}:`, error);
     throw error;
@@ -48,23 +60,23 @@ export const getLesson = async (id) => {
 };
 
 // Update lesson (Instructor/Admin only)
-export const updateLesson = async (id, lessonData) => {
+export const updateLesson = async (courseId, lessonId, lessonData) => {
   try {
-    const response = await apiClient.put(`/lessons/lessons/${id}`, lessonData);
+    const response = await apiClient.put(`/lessons/courses/${courseId}/lessons/${lessonId}`, lessonData);
     return response.data?.data || response.data;
   } catch (error) {
-    console.error(`Error updating lesson ${id}:`, error);
+    console.error(`Error updating lesson ${lessonId}:`, error);
     throw error;
   }
 };
 
 // Delete lesson (Instructor/Admin only)
-export const deleteLesson = async (id) => {
+export const deleteLesson = async (courseId, lessonId) => {
   try {
-    const response = await apiClient.delete(`/lessons/lessons/${id}`);
+    const response = await apiClient.delete(`/lessons/courses/${courseId}/lessons/${lessonId}`);
     return response.data?.data || response.data;
   } catch (error) {
-    console.error(`Error deleting lesson ${id}:`, error);
+    console.error(`Error deleting lesson ${lessonId}:`, error);
     throw error;
   }
 };

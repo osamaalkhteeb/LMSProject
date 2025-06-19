@@ -1,12 +1,16 @@
 import apiClient from './apiClient.js';
 
 // Create assignment (Instructor/Admin only)
-export const createAssignment = async (lessonId, assignmentData) => {
+export const createAssignment = async (courseId, lessonId, assignmentData) => {
   try {
-    const response = await apiClient.post(`/lessons/${lessonId}/assignments`, assignmentData);
+    console.log('Creating assignment with data:', { courseId, lessonId, assignmentData });
+    const response = await apiClient.post(`/assignments/courses/${courseId}/lessons/${lessonId}`, assignmentData);
+    console.log('Assignment creation response:', response.data);
     return response.data?.data || response.data;
   } catch (error) {
     console.error('Error creating assignment:', error);
+    console.error('Error response:', error.response?.data);
+    console.error('Error status:', error.response?.status);
     throw error;
   }
 };

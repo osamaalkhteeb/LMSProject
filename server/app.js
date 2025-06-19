@@ -26,6 +26,7 @@ import moduleRoutes from "./routes/module.routes.js";
 import lessonRoutes from "./routes/lesson.routes.js";
 import assignmentRoutes from "./routes/assignment.routes.js"
 import healthRoutes from "./routes/health.routes.js"
+import debugRoutes from "./routes/debug.routes.js"
 
 
 dotenv.config();
@@ -58,16 +59,16 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Add this temporary debug middleware
-// app.use((req, res, next) => {
-//   console.log('=== Request Debug ===');
-//   console.log('Method:', req.method);
-//   console.log('URL:', req.url);
-//   console.log('Content-Type:', req.headers['content-type']);
-//   console.log('Body:', req.body);
-//   console.log('Raw Body exists:', !!req.rawBody);
-//   console.log('====================');
-//   next();
-// });
+app.use((req, res, next) => {
+  console.log('=== Request Debug ===');
+  console.log('Method:', req.method);
+  console.log('URL:', req.url);
+  console.log('Content-Type:', req.headers['content-type']);
+  console.log('Body:', req.body);
+  console.log('Raw Body exists:', !!req.rawBody);
+  console.log('====================');
+  next();
+});
 app.use(cookieParser());
 
 // Initialize session
@@ -90,6 +91,7 @@ app.use("/api/modules", moduleRoutes);
 app.use("/api/lessons", lessonRoutes);
 app.use("/api/assignments", assignmentRoutes);
 app.use("/health", healthRoutes);
+app.use("/api/debug", debugRoutes);
 app.use(errorHandler);
 
 

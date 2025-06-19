@@ -9,12 +9,14 @@ import {
   updateUserById,
   deleteUser
 } from '../services/userService';
+import { useAuthContext } from './useAuth';
 
 // Hook for user profile management
 export const useUserProfile = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { user, setUser } = useAuthContext();
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -41,6 +43,11 @@ export const useUserProfile = () => {
       const updatedProfile = await updateUserProfile(profileData);
       setProfile(updatedProfile);
       
+      // Update auth context with new profile data
+      if (setUser && user) {
+        setUser({ ...user, ...updatedProfile });
+      }
+      
       // Call the success callback if provided (for immediate UI updates)
       if (onSuccess && typeof onSuccess === 'function') {
         onSuccess(updatedProfile);
@@ -54,14 +61,23 @@ export const useUserProfile = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [setUser, user]);
 
   const uploadImage = useCallback(async (imageFile) => {
     try {
       setLoading(true);
       setError(null);
       const result = await uploadProfileImage(imageFile);
-      await fetchProfile(); // Refresh profile after image upload
+      
+      // Refresh profile after image upload
+      const updatedProfile = await getUserProfile();
+      setProfile(updatedProfile);
+      
+      // Update auth context with new avatar URL
+      if (setUser && user && updatedProfile.avatar_url) {
+        setUser({ ...user, avatar_url: updatedProfile.avatar_url });
+      }
+      
       return result;
     } catch (err) {
       const errorMessage = err.response?.data?.message || err.response?.data?.data?.message || err.response?.data?.error || err.response?.statusText || err.message || 'Failed to upload image';
@@ -70,7 +86,7 @@ export const useUserProfile = () => {
     } finally {
       setLoading(false);
     }
-  }, [fetchProfile]);
+  }, [setUser, user]);
 
   const updatePassword = useCallback(async (passwordData) => {
     try {

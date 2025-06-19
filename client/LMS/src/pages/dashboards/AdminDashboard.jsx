@@ -79,7 +79,7 @@ const AdminDashboard = () => {
       <Box mb={4}>
         <Box display="flex" alignItems="center" gap={3} mb={4}>
           <Avatar 
-            src={admin.avatar} 
+            src={admin.avatar ? `${admin.avatar}?t=${Date.now()}` : admin.avatar} 
             sx={{ width: 80, height: 80, fontSize: '2rem', bgcolor: 'primary.main' }}
           >
             {admin.name.split(' ').map(n => n[0]).join('')}

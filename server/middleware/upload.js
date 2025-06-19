@@ -19,7 +19,7 @@ const imageFileFilter = (req, file, cb) => {
 const documentFileFilter = (req, file, cb) => {
   const allowedDocumentTypes = [
     'application/msword', // .doc
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document' // .docx
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document' // .docx\
   ];
   
   if (allowedDocumentTypes.includes(file.mimetype)) {

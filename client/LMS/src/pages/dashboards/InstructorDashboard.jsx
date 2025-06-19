@@ -322,6 +322,7 @@ const InstructorDashboard = () => {
         handleDialogClose={handleDialogClose}
         dialogType={dialogType}
         currentCourse={currentCourse}
+        onSuccess={fetchInstructorData}
       />
     </Container>
   );

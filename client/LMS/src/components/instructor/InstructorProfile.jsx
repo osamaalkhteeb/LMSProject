@@ -6,7 +6,7 @@ const InstructorProfile = ({ instructor }) => {
     <Box mb={4} display="flex" alignItems="center" gap={3}>
       <Avatar
         sx={{ width: 80, height: 80, fontSize: "2rem", bgcolor: "primary.main" }}
-        src={instructor?.avatar}
+        src={instructor?.avatar ? `${instructor.avatar}?t=${Date.now()}` : instructor?.avatar}
       >
         {instructor?.name
           ? instructor.name
@@ -21,9 +21,6 @@ const InstructorProfile = ({ instructor }) => {
         </Typography>
         <Typography variant="body1" color="text.secondary" mb={0.5}>
           {instructor?.email || "instructor@example.com"}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {instructor?.department || "Department"}
         </Typography>
       </Box>
     </Box>

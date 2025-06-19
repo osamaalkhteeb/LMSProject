@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import {
   getQuiz,
@@ -211,13 +212,29 @@ export const useQuizManagement = () => {
     }
   }, []);
 
+  const getQuizDetails = useCallback(async (quizId) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const quizData = await getQuiz(quizId);
+      return quizData;
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || err.response?.data?.data?.message || err.response?.data?.error || err.response?.statusText || err.message || 'Failed to fetch quiz details';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   return {
     loading,
     error,
     createNewQuiz,
     updateExistingQuiz,
     deleteExistingQuiz,
-    submitQuizAnswers
+    submitQuizAnswers,
+    getQuizDetails
   };
 };
 

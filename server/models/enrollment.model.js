@@ -98,7 +98,7 @@ const EnrollmentModel = {
     }
   },
 
-  // Calculate and update progress automatically
+  // Calculate and update progress automatically - Unified lesson-based approach
   async updateProgress(enrollmentId) {
     try {
       // Get enrollment details
@@ -113,57 +113,36 @@ const EnrollmentModel = {
         throw new Error("Enrollment not found");
       }
 
-      // count total completable items (lessons with video/text, quizzes, and assignments)
+      // Count total lessons in the course (all content types)
       const {
         rows: [totals],
       } = await query(
-        `
-        SELECT 
-          (SELECT COUNT(*) FROM lessons l
-           JOIN modules m ON l.module_id = m.id
-           WHERE m.course_id = $1 AND l.content_type IN ('video', 'text')) AS video_text_lessons,
-          (SELECT COUNT(*) FROM quizzes q
-           JOIN lessons l ON q.lesson_id = l.id
-           JOIN modules m ON l.module_id = m.id
-           WHERE m.course_id = $1) AS quizzes,
-          (SELECT COUNT(*) FROM assignments a
-           JOIN lessons l ON a.lesson_id = l.id
-           JOIN modules m ON l.module_id = m.id
-           WHERE m.course_id = $1) AS assignments`,
+        `SELECT COUNT(*) as total_lessons
+         FROM lessons l
+         JOIN modules m ON l.module_id = m.id
+         WHERE m.course_id = $1`,
         [enrollment.course_id]
       );
 
-      // count completed items (separate tracking for each type)
+      // Count completed lessons based on lesson_completions table
       const {
         rows: [completed],
       } = await query(
-        `
-        SELECT 
-          (SELECT COUNT(*) FROM lesson_completions lc
-           JOIN lessons l ON lc.lesson_id = l.id
-           JOIN modules m ON l.module_id = m.id
-           WHERE lc.user_id = $1 AND m.course_id = $2 AND l.content_type IN ('video', 'text')) AS video_text_lessons,
-          (SELECT COUNT(DISTINCT qr.quiz_id) FROM quiz_results qr
-            JOIN quizzes q ON qr.quiz_id = q.id
-            JOIN lessons l ON q.lesson_id = l.id
-            JOIN modules m ON l.module_id = m.id
-            WHERE qr.user_id = $1 AND m.course_id = $2 AND qr.score >= COALESCE(q.passing_score, 60)) AS quizzes,
-          (SELECT COUNT(DISTINCT s.assignment_id) FROM submissions s
-           JOIN assignments a ON s.assignment_id = a.id
-           JOIN lessons l ON a.lesson_id = l.id
-           JOIN modules m ON l.module_id = m.id
-           WHERE s.user_id = $1 AND m.course_id = $2) AS assignments
-      `,
+        `SELECT COUNT(*) as completed_lessons
+         FROM lesson_completions lc
+         JOIN lessons l ON lc.lesson_id = l.id
+         JOIN modules m ON l.module_id = m.id
+         WHERE lc.user_id = $1 AND m.course_id = $2`,
         [enrollment.user_id, enrollment.course_id]
       );
 
-      // calculate progress (sum all completion types)
-      const totalItems = parseInt(totals.video_text_lessons) + parseInt(totals.quizzes) + parseInt(totals.assignments);
-      const completedItems = parseInt(completed.video_text_lessons) + parseInt(completed.quizzes) + parseInt(completed.assignments);
+      // Calculate progress based on lesson completion
+      const totalLessons = parseInt(totals.total_lessons) || 0;
+      const completedLessons = parseInt(completed.completed_lessons) || 0;
       
       const progress =
-        totalItems > 0
-          ? Math.min(100, Math.round((completedItems / totalItems) * 100))
+        totalLessons > 0
+          ? Math.min(100, Math.round((completedLessons / totalLessons) * 100))
           : 0;
 
       // update enrollment

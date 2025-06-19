@@ -49,12 +49,16 @@ export const getQuizAttempts = async (id) => {
 };
 
 // Create quiz (Instructor/Admin only)
-export const createQuiz = async (lessonId, quizData) => {
+export const createQuiz = async (courseId, lessonId, quizData) => {
   try {
-    const response = await apiClient.post(`/quizzes/lessons/${lessonId}/quizzes`, quizData);
+    console.log('Creating quiz with data:', { courseId, lessonId, quizData });
+    const response = await apiClient.post(`/quizzes/courses/${courseId}/lessons/${lessonId}/quizzes`, quizData);
+    console.log('Quiz creation response:', response.data);
     return response.data?.data || response.data;
   } catch (error) {
     console.error('Error creating quiz:', error);
+    console.error('Error response:', error.response?.data);
+    console.error('Error status:', error.response?.status);
     throw error;
   }
 };

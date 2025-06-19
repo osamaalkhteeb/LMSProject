@@ -237,28 +237,6 @@ const SignupPage = () => {
                 size="medium"
                 sx={{ mb: 2 }}
               />
-
-              {/* Role Selection */}
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                id="role"
-                label="Role"
-                name="role"
-                select
-                value={formData.role}
-                onChange={handleChange}
-                size="medium"
-                sx={{ mb: 2 }}
-                SelectProps={{
-                  native: true,
-                }}
-              >
-                <option value="student">Student</option>
-                <option value="instructor">Instructor</option>
-              </TextField>
-
               {/* Error Display */}
                {(localError || errors.register) && (
                  <Alert severity="error" sx={{ mb: 2 }}>
