@@ -267,7 +267,7 @@ const Header = ({ mode, toggleDarkMode }) => {
       >
         <Toolbar>
           <Box sx={{
-            maxWidth: '1300px',
+            maxWidth: '1520px',
             width: '100%',
             margin: '0 auto',
             display: 'flex',
