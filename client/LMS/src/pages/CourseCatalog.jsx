@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import {
   Container,
@@ -225,8 +224,6 @@ const CourseCatalog = () => {
     }
   };
 
-
-
   if (loading) {
     return (
       <Container maxWidth="xl" sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
@@ -305,14 +302,23 @@ const CourseCatalog = () => {
             return (
               <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={course.id}>
                 <Card
-                  sx={{ height: "100%", display: "flex", flexDirection: "column" }}
+                  sx={{ 
+                    height: "100%", 
+                    display: "flex", 
+                    flexDirection: "column",
+                    minHeight: '400px'
+                  }}
                 >
                   <CardMedia
                     component="img"
-                    height="140"
+                    height="160"
                     image={course.thumbnail_url || '/placeholder-course.jpg'}
                     alt={course.title}
-                    sx={{ objectFit: 'cover' }}
+                    sx={{ 
+                      objectFit: 'cover',
+                      width: '100%',
+                      aspectRatio: '16/9'
+                    }}
                   />
                   <CardContent sx={{ flexGrow: 1 }}>
                     <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
@@ -386,7 +392,14 @@ const CourseCatalog = () => {
                 <img
                   src={previewDialog.course.thumbnail_url || '/placeholder-course.jpg'}
                   alt={previewDialog.course.title}
-                  style={{ width: '100%', height: '200px', objectFit: 'cover', borderRadius: '8px' }}
+                  style={{ 
+                    width: '100%', 
+                    maxHeight: '400px',
+                    objectFit: 'contain',
+                    borderRadius: '8px',
+                    margin: '0 auto',
+                    display: 'block'
+                  }}
                 />
               </Box>
               
