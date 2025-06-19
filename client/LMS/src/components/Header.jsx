@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   AppBar,
@@ -27,14 +26,19 @@ import { styled, alpha } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
-// Styled components for the search bar
+// Styled components
 const Search = styled('div')(({ theme }) => ({
   position: 'relative',
-  borderRadius: theme.shape.borderRadius,
-  backgroundColor: alpha(theme.palette.common.white, 0.15),
+  borderRadius: '12px',
+  backgroundColor: theme.palette.mode === 'dark' 
+    ? alpha(theme.palette.common.white, 0.15)
+    : alpha(theme.palette.common.black, 0.05),
   '&:hover': {
-    backgroundColor: alpha(theme.palette.common.white, 0.25),
+    backgroundColor: theme.palette.mode === 'dark'
+      ? alpha(theme.palette.common.white, 0.25)
+      : alpha(theme.palette.common.black, 0.08),
   },
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
   marginRight: theme.spacing(2),
   marginLeft: 0,
   width: '100%',
@@ -57,13 +61,51 @@ const SearchIconWrapper = styled('div')(({ theme }) => ({
 const StyledInputBase = styled(InputBase)(({ theme }) => ({
   color: 'inherit',
   '& .MuiInputBase-input': {
-    padding: theme.spacing(1, 1, 1, 0),
+    padding: theme.spacing(1.5, 1, 1.5, 0),
     paddingLeft: `calc(1em + ${theme.spacing(4)})`,
     transition: theme.transitions.create('width'),
     width: '100%',
     [theme.breakpoints.up('md')]: {
-      width: '20ch',
+      width: '24ch',
     },
+  },
+  '& .MuiInputBase-input:focus': {
+    width: '32ch',
+  },
+}));
+
+const HeaderButton = styled(Button)(({ theme }) => ({
+  textTransform: 'none',
+  borderRadius: '12px',
+  padding: '8px 16px',
+  margin: '0 4px',
+  fontWeight: 500,
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  color: theme.palette.mode === 'dark' ? theme.palette.text.primary : theme.palette.primary.contrastText,
+  backgroundColor: theme.palette.mode === 'dark' ? 'transparent' : theme.palette.primary.main,
+  '&:hover': {
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : theme.palette.primary.dark,
+  },
+  '&:focus': {
+    outline: 'none',
+    boxShadow: 'none',
+  },
+}));
+
+const HeaderIconButton = styled(IconButton)(({ theme }) => ({
+  borderRadius: '12px',
+  padding: '8px',
+  margin: '0 4px',
+  color: theme.palette.mode === 'dark' ? theme.palette.text.primary : theme.palette.primary.contrastText,
+  backgroundColor: theme.palette.mode === 'dark' ? 'transparent' : theme.palette.primary.main,
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  '&:hover': {
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : theme.palette.primary.dark,
+    transform: 'scale(1.05)',
+  },
+  '&:focus': {
+    outline: 'none',
+    boxShadow: 'none',
   },
 }));
 
@@ -71,9 +113,7 @@ const Header = ({ mode, toggleDarkMode }) => {
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [mobileMoreAnchorEl, setMobileMoreAnchorEl] = React.useState(null);
-  const { user, logout } = useAuth(); // Add logout here
-  const isInstructor = user?.role === 'instructor';
-  const isAdmin = user?.role === 'admin';
+  const { user, logout } = useAuth();
 
   const isMenuOpen = Boolean(anchorEl);
   const isMobileMenuOpen = Boolean(mobileMoreAnchorEl);
@@ -96,7 +136,6 @@ const Header = ({ mode, toggleDarkMode }) => {
   };
 
   const handleCoursesClick = () => {
-    // Navigate to course management/catalog
     navigate('/courses');
     handleMobileMenuClose();
   };
@@ -112,7 +151,6 @@ const Header = ({ mode, toggleDarkMode }) => {
   };
 
   const handleDashboardClick = () => {
-    // Navigate to user's dashboard based on role
     if (user) {
       navigate(`/dashboard/${user.role}`);
     }
@@ -133,21 +171,15 @@ const Header = ({ mode, toggleDarkMode }) => {
     logout();
     handleMenuClose();
   };
-  
+
   const menuId = 'primary-search-account-menu';
   const renderMenu = (
     <Menu
       anchorEl={anchorEl}
-      anchorOrigin={{
-        vertical: 'top',
-        horizontal: 'right',
-      }}
+      anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       id={menuId}
       keepMounted
-      transformOrigin={{
-        vertical: 'top',
-        horizontal: 'right',
-      }}
+      transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       open={isMenuOpen}
       onClose={handleMenuClose}
     >
@@ -160,16 +192,10 @@ const Header = ({ mode, toggleDarkMode }) => {
   const renderMobileMenu = (
     <Menu
       anchorEl={mobileMoreAnchorEl}
-      anchorOrigin={{
-        vertical: 'top',
-        horizontal: 'right',
-      }}
+      anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       id={mobileMenuId}
       keepMounted
-      transformOrigin={{
-        vertical: 'top',
-        horizontal: 'right',
-      }}
+      transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       open={isMobileMenuOpen}
       onClose={handleMobileMenuClose}
     >
@@ -179,8 +205,7 @@ const Header = ({ mode, toggleDarkMode }) => {
         </IconButton>
         <p>{mode === 'light' ? 'Dark' : 'Light'} Mode</p>
       </MenuItem>
-      
-      {/* Show Dashboard for authenticated users in mobile menu */}
+
       {user && (
         <MenuItem onClick={handleDashboardClick}>
           <IconButton size="large" color="inherit">
@@ -189,8 +214,7 @@ const Header = ({ mode, toggleDarkMode }) => {
           <p>Dashboard</p>
         </MenuItem>
       )}
-      
-      {/* Show Courses for guests and students in mobile menu */}
+
       {(!user || user?.role === 'student') && (
         <MenuItem onClick={handleCoursesClick}>
           <IconButton size="large" color="inherit">
@@ -199,8 +223,7 @@ const Header = ({ mode, toggleDarkMode }) => {
           <p>Courses</p>
         </MenuItem>
       )}
-      
-      {/* Show Settings only for authenticated users in mobile menu */}
+
       {user && (
         <MenuItem onClick={handleSettingsClick}>
           <IconButton size="large" color="inherit">
@@ -209,8 +232,7 @@ const Header = ({ mode, toggleDarkMode }) => {
           <p>Settings</p>
         </MenuItem>
       )}
-      
-      {/* Show Login and Register for non-authenticated users in mobile menu */}
+
       {!user && [
         <MenuItem key="login" onClick={handleLoginClick}>
           <IconButton size="large" color="inherit">
@@ -230,11 +252,39 @@ const Header = ({ mode, toggleDarkMode }) => {
 
   return (
     <Box sx={{ flexGrow: 1 }}>
-      <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+      <AppBar
+        position="fixed"
+        sx={{
+          zIndex: (theme) => theme.zIndex.drawer + 1,
+          backgroundColor: (theme) => 
+            theme.palette.mode === 'dark' ? theme.palette.background.paper : theme.palette.primary.main,
+          boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.1)',
+          borderBottom: (theme) => 
+            `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)'}`,
+          color: (theme) => 
+            theme.palette.mode === 'dark' ? theme.palette.text.primary : theme.palette.primary.contrastText
+        }}
+      >
         <Toolbar>
-          <Box sx={{ maxWidth: '1300px', width: '100%', margin: '0 auto', display: 'flex', alignItems: 'center' }}>
+          <Box sx={{
+            maxWidth: '1300px',
+            width: '100%',
+            margin: '0 auto',
+            display: 'flex',
+            alignItems: 'center',
+            padding: '0 16px'
+          }}>
             {/* Logo */}
-            <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', mr: 2, cursor: 'pointer' }}>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                mr: 2,
+                cursor: 'pointer',
+                '&:hover': { opacity: 0.8 }
+              }}
+              onClick={() => navigate('/')}
+            >
               <SchoolIcon sx={{ mr: 1, fontSize: 28 }} />
               <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold' }}>
                 EduGo
@@ -242,23 +292,27 @@ const Header = ({ mode, toggleDarkMode }) => {
             </Box>
 
             {/* Mobile menu button */}
-            <IconButton
+            <HeaderIconButton
               size="large"
               edge="start"
               color="inherit"
               aria-label="open drawer"
               sx={{ mr: 2, display: { xs: 'flex', md: 'none' } }}
               onClick={handleMobileMenuOpen}
+              disableRipple
             >
               <MenuIcon />
-            </IconButton>
+            </HeaderIconButton>
 
             {/* Search Bar */}
             <Search>
               <SearchIconWrapper>
                 <SearchIcon />
               </SearchIconWrapper>
-              <StyledInputBase placeholder="Search…" inputProps={{ 'aria-label': 'search' }} />
+              <StyledInputBase
+                placeholder="Search…"
+                inputProps={{ 'aria-label': 'search' }}
+              />
             </Search>
 
             <Box sx={{ flexGrow: 1 }} />
@@ -266,79 +320,93 @@ const Header = ({ mode, toggleDarkMode }) => {
             {/* Desktop Icons */}
             <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
               <Tooltip title={`Switch to ${mode === 'light' ? 'dark' : 'light'} mode`}>
-                <IconButton size="large" color="inherit" onClick={toggleDarkMode} sx={{ mx: 1 }}>
+                <HeaderIconButton
+                  size="large"
+                  color="inherit"
+                  onClick={toggleDarkMode}
+                  disableRipple
+                >
                   {mode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
-                </IconButton>
+                </HeaderIconButton>
               </Tooltip>
-              
-              {/* Show Dashboard button for authenticated users */}
+
               {user && (
                 <Tooltip title="Dashboard">
-                  <IconButton size="large" color="inherit" onClick={handleDashboardClick} sx={{ mx: 1 }}>
-                    <DashboardIcon />
-                    <Typography variant="body2" sx={{ ml: 1, color: 'white' }}>Dashboard</Typography>
-                  </IconButton>
-                </Tooltip>
-              )}
-              
-              {/* Show Courses button for guests and students */}
-              {(!user || user?.role === 'student') && (
-                <Tooltip title="Courses">
-                  <IconButton size="large" color="inherit" onClick={handleCoursesClick} sx={{ mx: 1 }}>
-                    <MenuBookIcon />
-                    <Typography variant="body2" sx={{ ml: 1, color: 'white' }}>Courses</Typography>
-                  </IconButton>
+                  <HeaderButton
+                    onClick={handleDashboardClick}
+                    startIcon={<DashboardIcon />}
+                  >
+                    Dashboard
+                  </HeaderButton>
                 </Tooltip>
               )}
 
-              {/* Show Settings and Account buttons only for authenticated users */}
+              {(!user || user?.role === 'student') && (
+                <Tooltip title="Courses">
+                  <HeaderButton
+                    onClick={handleCoursesClick}
+                    startIcon={<MenuBookIcon />}
+                  >
+                    Courses
+                  </HeaderButton>
+                </Tooltip>
+              )}
+
               {user && (
                 <>
                   <Tooltip title="Settings">
-                    <IconButton 
-                      size="large" 
-                      color="inherit" 
+                    <HeaderIconButton
+                      size="large"
                       onClick={handleSettingsClick}
-                      sx={{ mx: 1 }}
+                      disableRipple
                     >
                       <SettingsIcon />
-                    </IconButton>
+                    </HeaderIconButton>
                   </Tooltip>
 
                   <Tooltip title="Account">
-                    <IconButton
+                    <HeaderIconButton
                       size="large"
                       edge="end"
                       aria-label="account of current user"
                       aria-controls={menuId}
                       aria-haspopup="true"
                       onClick={handleProfileMenuOpen}
-                      color="inherit"
+                      disableRipple
                     >
                       <AccountCircleIcon />
-                    </IconButton>
+                    </HeaderIconButton>
                   </Tooltip>
                 </>
               )}
 
-              {/* Show Login and Register buttons for non-authenticated users */}
               {!user && (
                 <>
-                  <Button 
-                    color="inherit" 
-                    onClick={handleLoginClick}
-                    sx={{ mx: 1, textTransform: 'none' }}
-                  >
+                  <HeaderButton onClick={handleLoginClick}>
                     Login
-                  </Button>
-                  <Button 
-                    variant="outlined" 
-                    color="inherit" 
+                  </HeaderButton>
+                  <HeaderButton
+                    variant="outlined"
                     onClick={handleRegisterClick}
-                    sx={{ mx: 1, textTransform: 'none' }}
+                    sx={{
+                      borderColor: (theme) => 
+                        theme.palette.mode === 'dark' 
+                          ? 'rgba(255, 255, 255, 0.23)' 
+                          : 'rgba(255, 255, 255, 0.7)',
+                      '&:hover': {
+                        borderColor: (theme) => 
+                          theme.palette.mode === 'dark' 
+                            ? 'rgba(255, 255, 255, 0.3)' 
+                            : 'rgba(255, 255, 255, 0.9)',
+                        backgroundColor: (theme) => 
+                          theme.palette.mode === 'dark' 
+                            ? 'rgba(255, 255, 255, 0.08)' 
+                            : 'rgba(255, 255, 255, 0.04)',
+                      }
+                    }}
                   >
                     Register
-                  </Button>
+                  </HeaderButton>
                 </>
               )}
             </Box>
@@ -355,4 +423,3 @@ const Header = ({ mode, toggleDarkMode }) => {
 };
 
 export default Header;
-
