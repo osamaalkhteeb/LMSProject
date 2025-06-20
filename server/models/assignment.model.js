@@ -21,7 +21,7 @@ const AssignmentModel = {
   async getById(id) {
     try {
       const { rows } = await query(
-        `SELECT a.*, l.title as lesson_title, m.title as module_title, c.title as course_title
+        `SELECT a.*, l.title as lesson_title, m.title as module_title, c.title as course_title, c.id as course_id
          FROM assignments a
          JOIN lessons l ON a.lesson_id = l.id
          JOIN modules m ON l.module_id = m.id
@@ -181,7 +181,7 @@ const AssignmentModel = {
            s.graded_at,
            u.name as user_name,
            u.email as user_email
-         FROM assignment_submissions s
+         FROM submissions s
          JOIN users u ON s.user_id = u.id
          WHERE s.assignment_id = $1
          ORDER BY s.submitted_at DESC`,

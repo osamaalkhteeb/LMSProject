@@ -354,8 +354,14 @@ const AssignmentController = {
         );
       }
       
-      // Note: Assignment completion is tracked separately via submissions table
-      // No longer unmarking lesson completion for assignments
+      // Remove lesson completion when assignment submission is deleted
+      if (assignment.lesson_id) {
+        try {
+          await LessonCompletionModel.unmarkComplete(userId, assignment.lesson_id);
+        } catch (error) {
+          console.error('Error unmarking assignment lesson completion:', error);
+        }
+      }
       
       // Update course progress after deleting submission
       const enrollment = await EnrollmentModel.getByUserAndCourse(userId, assignment.course_id);

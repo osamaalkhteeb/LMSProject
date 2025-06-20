@@ -3,6 +3,7 @@ import { query } from "../config/db.js";
 const LessonCompletionModel = {
   async markComplete(userId, lessonId) {
     try {
+      console.log('LessonCompletionModel.markComplete called with:', { userId, lessonId });
       const { rows } = await query(
         `INSERT INTO lesson_completions (user_id, lesson_id, completed_at)
          VALUES ($1, $2, CURRENT_TIMESTAMP)
@@ -10,6 +11,7 @@ const LessonCompletionModel = {
          RETURNING *`,
         [userId, lessonId]
       );
+      console.log('Database query result:', { rowCount: rows.length, firstRow: rows[0] });
       return rows[0];
     } catch (error) {
       console.error("Error marking lesson complete:", error);

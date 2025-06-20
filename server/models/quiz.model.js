@@ -46,7 +46,7 @@ const QuizModel = {
       
       return {
         attemptCount,
-        maxAttempts: quiz.max_attempts,
+        max_attempts: quiz.max_attempts,
         remainingAttempts: quiz.max_attempts ? Math.max(0, quiz.max_attempts - attemptCount) : null,
         canAttempt: !quiz.max_attempts || attemptCount < quiz.max_attempts
       };
@@ -63,7 +63,7 @@ const QuizModel = {
       const {
         rows: [quiz],
       } = await query(
-        `SELECT q.id, q.title, q.passing_score, q.time_limit, q.max_attempts,
+        `SELECT q.id, q.title, q.passing_score, q.time_limit, q.max_attempts, q.lesson_id,
                 l.title as lesson_title, c.title as course_title
          FROM quizzes q
          JOIN lessons l ON q.lesson_id = l.id
@@ -481,7 +481,7 @@ const QuizModel = {
   },
 
   // Create a new quiz
-  async create({ lessonId, title, passingScore, timeLimit, maxAttempts = 1, questions }) {
+  async create({ lessonId, title, passing_score, time_limit, max_attempts = 1, questions }) {
     try {
       // Start a transaction
       await query('BEGIN');
@@ -491,7 +491,7 @@ const QuizModel = {
         `INSERT INTO quizzes (lesson_id, title, passing_score, time_limit, max_attempts)
          VALUES ($1, $2, $3, $4, $5)
          RETURNING id`,
-        [lessonId, title, passingScore, timeLimit, maxAttempts]
+        [lessonId, title, passing_score, time_limit, max_attempts]
       );
       
       // Create questions and options
@@ -503,7 +503,7 @@ const QuizModel = {
              (quiz_id, question_text, question_type, points, order_num)
              VALUES ($1, $2, $3, $4, $5)
              RETURNING id`,
-            [quiz.id, question.text, question.type, question.points, i + 1]
+            [quiz.id, question.question_text, question.question_type, question.points, i + 1]
           );
           
           // Create options for this question
@@ -534,8 +534,10 @@ const QuizModel = {
   },
 
   // Update an existing quiz
-  async update(quizId, { title, passingScore, timeLimit, questions }) {
+  async update(quizId, { title, passing_score, time_limit, questions }) {
     try {
+
+      
       // Start a transaction
       await query('BEGIN');
       
@@ -546,14 +548,65 @@ const QuizModel = {
              passing_score = COALESCE($2, passing_score),
              time_limit = COALESCE($3, time_limit)
          WHERE id = $4`,
-        [title, passingScore, timeLimit, quizId]
+        [title, passing_score, time_limit, quizId]
       );
       
-      // Update questions if provided
-      if (questions && questions.length > 0) {
+
+      
+      // Handle questions update
+      if (questions !== undefined) {
+        // Get current question IDs from database
+        const { rows: currentQuestions } = await query(
+          `SELECT id FROM quiz_questions WHERE quiz_id = $1`,
+          [quizId]
+        );
+        const currentQuestionIds = currentQuestions.map(q => q.id);
+        
+        // Get question IDs from the update payload
+        const updatedQuestionIds = questions
+          .filter(q => q.id)
+          .map(q => q.id);
+        
+        // Find questions to delete (exist in DB but not in update)
+        const questionsToDelete = currentQuestionIds.filter(
+          id => !updatedQuestionIds.includes(id)
+        );
+        
+
+        
+        // Delete removed questions and their options
+        if (questionsToDelete.length > 0) {
+
+          
+          // Delete options first
+          await query(
+            `DELETE FROM quiz_options 
+             WHERE question_id IN (${questionsToDelete.map((_, i) => `$${i + 1}`).join(',')})`,
+            questionsToDelete
+          );
+          
+          // Delete quiz answers for these questions
+          await query(
+            `DELETE FROM quiz_answers 
+             WHERE question_id IN (${questionsToDelete.map((_, i) => `$${i + 1}`).join(',')})`,
+            questionsToDelete
+          );
+          
+          // Delete the questions
+          await query(
+            `DELETE FROM quiz_questions 
+             WHERE id IN (${questionsToDelete.map((_, i) => `$${i + 1}`).join(',')})`,
+            questionsToDelete
+          );
+          
+
+        }
+        
+        // Process remaining questions (update existing and create new)
         for (const question of questions) {
           if (question.id) {
             // Update existing question
+
             await query(
               `UPDATE quiz_questions
                SET question_text = $1, question_type = $2, points = $3, order_num = $4
@@ -630,12 +683,25 @@ const QuizModel = {
       // Commit the transaction
       await query('COMMIT');
       
+
+      
       // Return the updated quiz
       return this.getById(quizId);
     } catch (error) {
       // Rollback in case of error
       await query('ROLLBACK');
-      console.error("Error updating quiz:", error);
+      
+      console.error(`Error updating quiz ID: ${quizId}`, {
+        error: error.message,
+        stack: error.stack,
+        quizId,
+        title,
+        passing_score,
+        time_limit,
+        questionsCount: questions?.length || 0,
+        timestamp: new Date().toISOString()
+      });
+      
       throw error;
     }
   },
@@ -713,6 +779,82 @@ const QuizModel = {
       return enrollment;
     } catch (error) {
       console.error("Error fetching enrollment by user and quiz:", error);
+      throw error;
+    }
+  },
+
+  // Get all quizzes for user's enrolled courses with attempts
+  async getUserQuizzesWithAttempts(userId) {
+    try {
+      const { rows } = await query(
+        `SELECT 
+          q.id,
+          q.title,
+          q.passing_score,
+          q.time_limit,
+          q.max_attempts,
+          l.title as lesson_title,
+          l.id as lesson_id,
+          c.title as course_title,
+          c.id as course_id,
+          (SELECT COUNT(*) FROM quiz_questions WHERE quiz_id = q.id) as question_count,
+          -- Get best attempt info
+          COALESCE(best_attempt.score, 0) as best_score,
+          best_attempt.attempt_number as best_attempt_number,
+          best_attempt.completed_at as best_completed_at,
+          COALESCE(attempt_count.total_attempts, 0) as total_attempts
+        FROM quizzes q
+        JOIN lessons l ON q.lesson_id = l.id
+        JOIN modules m ON l.module_id = m.id
+        JOIN courses c ON m.course_id = c.id
+        JOIN enrollments e ON c.id = e.course_id
+        LEFT JOIN (
+          -- Get best attempt (highest score) for each quiz
+          SELECT 
+            quiz_id,
+            score,
+            attempt_number,
+            completed_at,
+            ROW_NUMBER() OVER (PARTITION BY quiz_id ORDER BY score DESC, completed_at DESC) as rn
+          FROM quiz_results
+          WHERE user_id = $1
+        ) best_attempt ON q.id = best_attempt.quiz_id AND best_attempt.rn = 1
+        LEFT JOIN (
+          -- Get total attempt count for each quiz
+          SELECT 
+            quiz_id,
+            COUNT(*) as total_attempts
+          FROM quiz_results
+          WHERE user_id = $1
+          GROUP BY quiz_id
+        ) attempt_count ON q.id = attempt_count.quiz_id
+        WHERE e.user_id = $1
+        ORDER BY c.title, l.title, q.title`,
+        [userId]
+      );
+      
+      return rows.map(row => ({
+        id: row.id,
+        title: row.title,
+        passing_score: row.passing_score,
+        time_limit: row.time_limit,
+        max_attempts: row.max_attempts,
+        lesson_title: row.lesson_title,
+        lesson_id: row.lesson_id,
+        course_title: row.course_title,
+        course_id: row.course_id,
+        question_count: row.question_count,
+        // Best attempt info
+        best_attempt: row.best_score > 0 ? {
+          score: row.best_score,
+          total_score: row.question_count,
+          attempt_number: row.best_attempt_number,
+          completed_at: row.best_completed_at
+        } : null,
+        total_attempts: row.total_attempts
+      }));
+    } catch (error) {
+      console.error("Error fetching user quizzes with attempts:", error);
       throw error;
     }
   },

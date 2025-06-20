@@ -25,6 +25,10 @@ apiClient.interceptors.request.use(
     // Handle FormData - remove Content-Type header to let browser set it with boundary
     if (config.data instanceof FormData) {
       delete config.headers['Content-Type'];
+      // Increase timeout for file uploads if not already set
+      if (!config.timeout) {
+        config.timeout = 60000; // 60 seconds for file uploads
+      }
     }
     
     // Add metadata for tracking request duration

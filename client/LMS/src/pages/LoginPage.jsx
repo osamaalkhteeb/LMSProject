@@ -18,27 +18,40 @@ import GoogleIcon from "@mui/icons-material/Google";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useAuth } from "../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
+import { useFormHandler } from "../hooks/useFormHandler";
+import { validateEmail, validateRequired } from "../utils/validation";
+
 
 const LoginPage = () => {
-  const { login, googleLogin, loading, errors } = useAuth();
+  const { login, googleLogin, loading } = useAuth();
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+  
+  // Form validation rules
+  const validationRules = {
+    email: [validateEmail],
+    password: [(value) => validateRequired(value, 'Password')]
   };
+  
+  // Use the form handler hook
+  const {
+    formData,
+    errors,
+    isSubmitting,
+    submitError,
+    submitSuccess,
+    handleChange,
+    handleSubmit
+  } = useFormHandler(
+    { email: '', password: '' },
+    validationRules
+  );
 
-  const handleSubmit = async (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
-    try {
-      const result = await login(formData);
+    
+    return handleSubmit(async (data) => {
+      const result = await login(data);
+      
       // Redirect to appropriate dashboard based on user role
       if (result && result.user) {
         const dashboardMap = {
@@ -50,10 +63,9 @@ const LoginPage = () => {
       } else {
         navigate('/dashboard');
       }
-    } catch (error) {
-      // Error is already handled by the useAuth hook
-      console.error('Login error:', error);
-    }
+      
+      return result;
+    });
   };
 
   const handleGoogleLogin = () => {
@@ -156,13 +168,19 @@ const LoginPage = () => {
               Welcome Back
             </Typography>
 
-            {errors.login && (
+            {submitError && (
               <Alert severity="error" sx={{ mb: 3 }}>
-                {errors.login}
+                {submitError}
+              </Alert>
+            )}
+            
+            {submitSuccess && (
+              <Alert severity="success" sx={{ mb: 3 }}>
+                {submitSuccess}
               </Alert>
             )}
 
-            <Box component="form" noValidate onSubmit={handleSubmit}>
+            <Box component="form" noValidate onSubmit={onSubmit}>
               <Button
                 fullWidth
                 variant="outlined"
@@ -202,7 +220,9 @@ const LoginPage = () => {
                 sx={{ mb: 2 }}
                 value={formData.email}
                 onChange={handleChange}
-                disabled={loading}
+                disabled={loading || isSubmitting}
+                error={!!errors.email}
+                helperText={errors.email}
               />
 
               <TextField
@@ -218,7 +238,9 @@ const LoginPage = () => {
                 sx={{ mb: 2 }}
                 value={formData.password}
                 onChange={handleChange}
-                disabled={loading}
+                disabled={loading || isSubmitting}
+                error={!!errors.password}
+                helperText={errors.password}
               />
 
               <Box
@@ -252,9 +274,9 @@ const LoginPage = () => {
                     boxShadow: 4
                   }
                 }}
-                disabled={loading}
+                disabled={loading || isSubmitting}
               >
-                {loading ? <CircularProgress size={24} color="inherit" /> : 'Login'}
+                {(loading || isSubmitting) ? <CircularProgress size={24} color="inherit" /> : 'Login'}
               </Button>
 
               <Typography 

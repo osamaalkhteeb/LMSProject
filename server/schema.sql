@@ -65,7 +65,8 @@ CREATE TABLE lessons (
     content_type VARCHAR(20) CHECK (content_type IN ('video', 'quiz', 'text', 'assignment')),
     content_url TEXT,
     duration INTEGER,
-    order_num INTEGER
+    order_num INTEGER,
+    cloudinary_public_id TEXT
 );
 
 -- ASSIGNMENTS
@@ -159,76 +160,89 @@ CREATE TABLE quiz_answers (
 );
 
 
-CREATE TABLE badges (
+CREATE TABLE analytics_snapshots (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    description TEXT,
-    icon_url TEXT
+    snapshot_date DATE NOT NULL UNIQUE,
+    total_users INTEGER DEFAULT 0,
+    total_courses INTEGER DEFAULT 0,
+    total_enrollments INTEGER DEFAULT 0,
+    active_users INTEGER DEFAULT 0,
+    completion_rate DECIMAL(5,2) DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE user_badges (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
-    badge_id INTEGER REFERENCES badges(id),
-    awarded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (user_id, badge_id) -- Prevent duplicates
-);
 
-CREATE TABLE video_notes (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
-    lesson_id INTEGER REFERENCES lessons(id),
-    timestamp INTEGER CHECK (timestamp >= 0), -- in seconds
-    note TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+-- Index for user email lookups
+CREATE INDEX idx_users_email ON users(email);
 
--- Certificates
-CREATE TABLE certificates (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
-    issued_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    certificate_url TEXT NOT NULL,
-    verification_code VARCHAR(20) UNIQUE
-);
+-- Index for user role-based filtering
+CREATE INDEX idx_users_role ON users(role);
 
--- Course reviews
-CREATE TABLE course_reviews (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
-    rating INTEGER CHECK (rating BETWEEN 1 AND 5),
-    comment TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (user_id, course_id)  -- Prevent duplicate reviews
-);
+-- Indexes for foreign keys
+CREATE INDEX idx_enrollments_user_id ON enrollments(user_id);
+CREATE INDEX idx_enrollments_course_id ON enrollments(course_id);
 
--- Instructor dashboard view
-CREATE VIEW instructor_analytics AS
-SELECT 
-    u.id AS instructor_id,
-    COUNT(c.id) AS total_courses,
-    AVG(cr.rating) AS avg_rating,
-    COUNT(DISTINCT e.user_id) AS total_students
-FROM users u
-LEFT JOIN courses c ON u.id = c.instructor_id
-LEFT JOIN course_reviews cr ON c.id = cr.course_id
-LEFT JOIN enrollments e ON c.id = e.course_id
-WHERE u.role = 'instructor'
-GROUP BY u.id;
+CREATE INDEX idx_courses_instructor_id ON courses(instructor_id);
+CREATE INDEX idx_courses_category_id ON courses(category_id);
 
--- Certificate verification view
-CREATE VIEW certificate_verification AS
-SELECT 
-    c.id AS certificate_id,
-    u.name AS student_name,
-    co.title AS course_title,
-    c.verification_code
-FROM certificates c
-JOIN users u ON c.user_id = u.id
-JOIN courses co ON c.course_id = co.id;
+CREATE INDEX idx_modules_course_id ON modules(course_id);
 
--- Data fixes and updates
--- Update any NULL points in quiz_questions to default value of 1
-UPDATE quiz_questions SET points = 1 WHERE points IS NULL;
+CREATE INDEX idx_lessons_module_id ON lessons(module_id);
+CREATE INDEX idx_assignments_lesson_id ON assignments(lesson_id);
+
+CREATE INDEX idx_submissions_assignment_id ON submissions(assignment_id);
+CREATE INDEX idx_submissions_user_id ON submissions(user_id);
+
+CREATE INDEX idx_quizzes_lesson_id ON quizzes(lesson_id);
+CREATE INDEX idx_quiz_questions_quiz_id ON quiz_questions(quiz_id);
+CREATE INDEX idx_quiz_questions_order_num ON quiz_questions(quiz_id, order_num);
+CREATE INDEX idx_quiz_options_question_id ON quiz_options(question_id);
+CREATE INDEX idx_quiz_options_is_correct ON quiz_options(question_id, is_correct);
+CREATE INDEX idx_quiz_results_user_id ON quiz_results(user_id);
+CREATE INDEX idx_quiz_results_quiz_id ON quiz_results(quiz_id);
+CREATE INDEX idx_quiz_results_started_at ON quiz_results(started_at);
+CREATE INDEX idx_quiz_answers_result_id ON quiz_answers(result_id);
+CREATE INDEX idx_quiz_answers_question_id ON quiz_answers(question_id);
+CREATE INDEX idx_quiz_answers_option_id ON quiz_answers(option_id);
+
+-- Enrollments: if the student is enrolled in this course or not
+CREATE INDEX idx_enrollments_user_course 
+ON enrollments(user_id, course_id);
+
+-- Courses: Get all Web Dev courses by an instructor
+CREATE INDEX idx_courses_instructor_category 
+ON courses(instructor_id, category_id);
+
+-- Lessons: All quiz lessons in a specific module
+CREATE INDEX idx_lessons_module_type 
+ON lessons(module_id, content_type);
+
+-- Submissions: Check if student submitted a specific assignment
+CREATE INDEX idx_submissions_assignment_user 
+ON submissions(assignment_id, user_id);
+
+
+CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at);
+CREATE INDEX IF NOT EXISTS idx_courses_created_at ON courses(created_at);
+CREATE INDEX IF NOT EXISTS idx_enrollments_enrolled_at ON enrollments(enrolled_at);
+CREATE INDEX IF NOT EXISTS idx_enrollments_completed_at ON enrollments(completed_at);
+
+
+
+
+
+CREATE INDEX idx_analytics_snapshots_date ON analytics_snapshots(snapshot_date);
+
+
+-- Only run if you have data with NULL timestamps
+UPDATE users 
+SET created_at = CURRENT_TIMESTAMP - (RANDOM() * INTERVAL '365 days')
+WHERE created_at IS NULL;
+
+UPDATE courses 
+SET created_at = CURRENT_TIMESTAMP - (RANDOM() * INTERVAL '180 days')
+WHERE created_at IS NULL;
+
+UPDATE enrollments 
+SET enrolled_at = CURRENT_TIMESTAMP - (RANDOM() * INTERVAL '90 days')
+WHERE enrolled_at IS NULL;
