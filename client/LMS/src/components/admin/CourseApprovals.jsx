@@ -8,19 +8,15 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   Button,
   Chip,
   Avatar,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
   CircularProgress,
   Alert,
+  Card,
+  CardContent,
 } from "@mui/material";
-import { CheckCircle, Cancel } from "@mui/icons-material";
+import { CheckCircle } from "@mui/icons-material";
 import { getPendingCourses, approveCourse } from "../../services/courseService";
 
 const CourseApprovals = () => {
@@ -28,8 +24,7 @@ const CourseApprovals = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [actionLoading, setActionLoading] = useState({});
-  const [selectedCourse, setSelectedCourse] = useState(null);
-  const [openDialog, setOpenDialog] = useState(false);
+
 
   useEffect(() => {
     fetchPendingCourses();
@@ -62,54 +57,11 @@ const CourseApprovals = () => {
     }
   };
 
-  const handleReject = async (courseId) => {
-    try {
-      setActionLoading(prev => ({ ...prev, [courseId]: 'rejecting' }));
-      await approveCourse(courseId, { is_approved: false });
-      setPendingCourses(pendingCourses.filter(course => course.id !== courseId));
-    } catch (error) {
-      console.error('Error rejecting course:', error);
-      setError('Failed to reject course');
-    } finally {
-      setActionLoading(prev => ({ ...prev, [courseId]: null }));
-    }
-  };
 
-  const oldPendingCourses = [
-    {
-      id: 1,
-      name: "Advanced Python Programming",
-      instructor: "Dr. Ahmed Khaled",
-      submittedDate: "2025-06-12",
-      category: "Programming",
-      status: "Pending Review",
-    },
-    {
-      id: 2,
-      name: "Introduction to Quantum Computing",
-      instructor: "Prof. Sarah Johnson",
-      submittedDate: "2025-06-10",
-      category: "Science",
-      status: "Pending Review",
-    },
-    {
-      id: 3,
-      name: "Digital Marketing Fundamentals",
-      instructor: "John Smith",
-      submittedDate: "2025-06-08",
-      category: "Business",
-      status: "Pending Review",
-    },
-  ];
 
-  const handleViewDetails = (course) => {
-    setSelectedCourse(course);
-    setOpenDialog(true);
-  };
+  // Removed hardcoded data - now using real API data only
 
-  const handleDialogClose = () => {
-    setOpenDialog(false);
-  };
+
 
   return (
     <>
@@ -158,24 +110,24 @@ const CourseApprovals = () => {
                         <Box display="flex" alignItems="center" gap={2}>
                           <Avatar
                             src={course.thumbnail_url ? `${course.thumbnail_url}?t=${Date.now()}` : course.thumbnail_url}
-                            alt={course.title || course.name}
+                            alt={course.title}
                             variant="rounded"
                             sx={{ width: 60, height: 40 }}
                           >
-                            {(course.title || course.name)?.charAt(0)}
+                            {course.title?.charAt(0)}
                           </Avatar>
                           <Box>
-                            <Typography variant="subtitle2">{course.title || course.name}</Typography>
+                            <Typography variant="subtitle2">{course.title}</Typography>
                             <Typography variant="body2" color="text.secondary">
-                              {course.category_name || course.category || 'Uncategorized'}
+                              {course.description}
                             </Typography>
                           </Box>
                         </Box>
                       </TableCell>
-                      <TableCell>{course.instructor_name || course.instructor}</TableCell>
-                      <TableCell>{course.category_name || course.category}</TableCell>
+                      <TableCell>{course.instructor_name}</TableCell>
+                      <TableCell>{course.category_name}</TableCell>
                       <TableCell>
-                        {course.created_at ? new Date(course.created_at).toLocaleDateString() : course.submittedDate}
+                        {course.created_at ? new Date(course.created_at).toLocaleDateString() : 'N/A'}
                       </TableCell>
                       <TableCell>
                         <Chip
@@ -196,23 +148,6 @@ const CourseApprovals = () => {
                           >
                             {actionLoading[course.id] === 'approving' ? 'Approving...' : 'Approve'}
                           </Button>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            color="error"
-                            startIcon={<Cancel />}
-                            onClick={() => handleReject(course.id)}
-                            disabled={actionLoading[course.id] === 'rejecting'}
-                          >
-                            {actionLoading[course.id] === 'rejecting' ? 'Rejecting...' : 'Reject'}
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            onClick={() => handleViewDetails(course)}
-                          >
-                            View
-                          </Button>
                         </Box>
                       </TableCell>
                     </TableRow>
@@ -223,70 +158,6 @@ const CourseApprovals = () => {
           </TableContainer>
         </CardContent>
       </Card>
-
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
-        <DialogTitle>
-          Course Details: {selectedCourse?.title || selectedCourse?.name}
-        </DialogTitle>
-        <DialogContent>
-          {selectedCourse && (
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="h6" gutterBottom>
-                {selectedCourse.title || selectedCourse.name}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" paragraph>
-                <strong>Instructor:</strong> {selectedCourse.instructor_name || selectedCourse.instructor}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" paragraph>
-                <strong>Category:</strong> {selectedCourse.category_name || selectedCourse.category || 'Uncategorized'}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" paragraph>
-                <strong>Submitted:</strong> {selectedCourse.created_at ? new Date(selectedCourse.created_at).toLocaleDateString() : selectedCourse.submittedDate}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" paragraph>
-                <strong>Description:</strong>
-              </Typography>
-              <Typography variant="body2" paragraph>
-                {selectedCourse.description || 'No description available'}
-              </Typography>
-              {selectedCourse.price && (
-                <Typography variant="body2" color="text.secondary" paragraph>
-                  <strong>Price:</strong> ${selectedCourse.price}
-                </Typography>
-              )}
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>Close</Button>
-          {selectedCourse && (
-            <>
-              <Button
-                variant="contained"
-                color="success"
-                onClick={() => {
-                  handleApprove(selectedCourse.id);
-                  setOpenDialog(false);
-                }}
-                disabled={actionLoading[selectedCourse.id] === 'approving'}
-              >
-                Approve
-              </Button>
-              <Button
-                variant="outlined"
-                color="error"
-                onClick={() => {
-                  handleReject(selectedCourse.id);
-                  setOpenDialog(false);
-                }}
-                disabled={actionLoading[selectedCourse.id] === 'rejecting'}
-              >
-                Reject
-              </Button>
-            </>
-          )}
-        </DialogActions>
-      </Dialog>
     </>
   );
 };

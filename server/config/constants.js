@@ -1,8 +1,3 @@
-export const USER_ROLES = {
-    STUDENT: 'student',
-  INSTRUCTOR: 'instructor',
-  ADMIN: 'admin',
-};
 
 export const HTTP_STATUS = {
   OK: 200,

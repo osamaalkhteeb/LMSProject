@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   Grid,
   Card,
@@ -16,91 +16,159 @@ import {
   ListItemIcon,
   ListItemText,
   Divider,
+  CircularProgress,
+  Alert,
+  Box,
+  Chip
 } from "@mui/material";
 import {
   BarChart as ChartIcon,
   People as PeopleIcon,
   Book as CourseIcon,
-  Star,
+
   Settings as SettingsIcon,
-  Add as AddIcon,
+
+  Download as DownloadIcon,
+  Refresh as RefreshIcon
 } from "@mui/icons-material";
-import AdminDialog from "./AdminDialog";
+
+import { getReports, generateReport, downloadReport } from "../../services/systemService";
+
 
 const SystemReports = () => {
-  const [openDialog, setOpenDialog] = useState(false);
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [generating, setGenerating] = useState({});
 
-  const reports = [
- {
-      id: 1,
-      name: "User Activity Report",
-      type: "Daily",
-      generatedDate: "2025-06-15",
-      downloads: 24,
-    },
-    {
-      id: 2,
-      name: "Course Popularity",
-      type: "Monthly",
-      generatedDate: "2025-06-01",
-      downloads: 156,
-    },
-    {
-      id: 3,
-      name: "System Performance",
-      type: "Weekly",
-      generatedDate: "2025-06-08",
-      downloads: 42,
-    },  ];
+  useEffect(() => {
+    fetchReports();
+  }, []);
 
-  const handleDialogOpen = () => {
-    setOpenDialog(true);
+  const fetchReports = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getReports();
+      setReports(response || []);
+    } catch (error) {
+      console.error('Error fetching reports:', error);
+      setError('Failed to load reports');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDialogClose = () => {
-    setOpenDialog(false);
+  const handleGenerateReport = async (reportType) => {
+    try {
+      setGenerating(prev => ({ ...prev, [reportType]: true }));
+      const response = await generateReport(reportType);
+      // Refresh reports list after generating
+      await fetchReports();
+    } catch (error) {
+      console.error('Error generating report:', error);
+      setError('Failed to generate report');
+    } finally {
+      setGenerating(prev => ({ ...prev, [reportType]: false }));
+    }
   };
+
+  const handleDownloadReport = async (reportId) => {
+    try {
+      await downloadReport(reportId);
+    } catch (error) {
+      console.error('Error downloading report:', error);
+      setError('Failed to download report');
+    }
+  };
+
+
 
   return (
     <Grid container spacing={3}>
       <Grid item xs={12} md={8}>
         <Card sx={{ height: '100%', borderRadius: 2 }}>
           <CardContent>
-            <Typography variant="h6" fontWeight="bold" mb={3}>
-              Recent Reports
-            </Typography>
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Report Name</TableCell>
-                    <TableCell>Type</TableCell>
-                    <TableCell>Generated Date</TableCell>
-                    <TableCell>Downloads</TableCell>
-                    <TableCell>Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {reports.map((report) => (
-                    <TableRow key={report.id}>
-                      <TableCell>{report.name}</TableCell>
-                      <TableCell>{report.type}</TableCell>
-                      <TableCell>{report.generatedDate}</TableCell>
-                      <TableCell>{report.downloads}</TableCell>
-                      <TableCell>
-                        <Button 
-                          size="small" 
-                          variant="outlined" 
-                          startIcon={<ChartIcon />}
-                        >
-                          Generate
-                        </Button>
-                      </TableCell>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+              <Typography variant="h6" fontWeight="bold">
+                System Reports
+              </Typography>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<RefreshIcon />}
+                onClick={fetchReports}
+                disabled={loading}
+              >
+                Refresh
+              </Button>
+            </Box>
+            
+            {error && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {error}
+              </Alert>
+            )}
+            
+            {loading ? (
+              <Box display="flex" justifyContent="center" py={4}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Report Name</TableCell>
+                      <TableCell>Type</TableCell>
+                      <TableCell>Generated Date</TableCell>
+                      <TableCell>Downloads</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Actions</TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                  </TableHead>
+                  <TableBody>
+                    {reports.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} align="center">
+                          <Typography variant="body2" color="text.secondary">
+                            No reports available
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      reports.map((report) => (
+                        <TableRow key={report.id}>
+                          <TableCell>{report.name}</TableCell>
+                          <TableCell>{report.type}</TableCell>
+                          <TableCell>{report.generatedDate}</TableCell>
+                          <TableCell>{report.downloads}</TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={report.status || 'Available'} 
+                              color={report.status === 'Available' ? 'success' : 'default'} 
+                              size="small" 
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Box display="flex" gap={1}>
+                              <Button 
+                                size="small" 
+                                variant="outlined" 
+                                startIcon={<DownloadIcon />}
+                                onClick={() => handleDownloadReport(report.id)}
+                              >
+                                Download
+                              </Button>
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
           </CardContent>
         </Card>
       </Grid>
@@ -111,52 +179,73 @@ const SystemReports = () => {
               Quick Reports
             </Typography>
             <List>
-              <ListItem button>
+              <ListItem 
+                component="button" 
+                onClick={() => handleGenerateReport('user-registration')}
+                disabled={generating['user-registration']}
+              >
                 <ListItemIcon>
-                  <PeopleIcon color="primary" />
+                  {generating['user-registration'] ? (
+                    <CircularProgress size={20} />
+                  ) : (
+                    <PeopleIcon color="primary" />
+                  )}
                 </ListItemIcon>
                 <ListItemText primary="User Registration Trends" />
               </ListItem>
               <Divider />
-              <ListItem button>
+              <ListItem 
+                component="button" 
+                onClick={() => handleGenerateReport('course-enrollment')}
+                disabled={generating['course-enrollment']}
+              >
                 <ListItemIcon>
-                  <CourseIcon color="secondary" />
+                  {generating['course-enrollment'] ? (
+                    <CircularProgress size={20} />
+                  ) : (
+                    <CourseIcon color="secondary" />
+                  )}
                 </ListItemIcon>
                 <ListItemText primary="Course Enrollment Stats" />
               </ListItem>
               <Divider />
-              <ListItem button>
+              <ListItem 
+                component="button" 
+                onClick={() => handleGenerateReport('course-creation')}
+                disabled={generating['course-creation']}
+              >
                 <ListItemIcon>
-                  <Star color="warning" />
+                  {generating['course-creation'] ? (
+                    <CircularProgress size={20} />
+                  ) : (
+                    <CourseIcon color="success" />
+                  )}
                 </ListItemIcon>
-                <ListItemText primary="Course Ratings Analysis" />
+                <ListItemText primary="Course Creation Report" />
               </ListItem>
               <Divider />
-              <ListItem button>
+
+              <ListItem 
+                component="button" 
+                onClick={() => handleGenerateReport('system-usage')}
+                disabled={generating['system-usage']}
+              >
                 <ListItemIcon>
-                  <SettingsIcon color="info" />
+                  {generating['system-usage'] ? (
+                    <CircularProgress size={20} />
+                  ) : (
+                    <SettingsIcon color="info" />
+                  )}
                 </ListItemIcon>
                 <ListItemText primary="System Usage Metrics" />
               </ListItem>
             </List>
-            <Button 
-              variant="contained" 
-              fullWidth 
-              sx={{ mt: 2 }}
-              startIcon={<AddIcon />}
-              onClick={handleDialogOpen}
-            >
-              Create Custom Report
-            </Button>
+
           </CardContent>
         </Card>
       </Grid>
 
-      <AdminDialog 
-        open={openDialog} 
-        onClose={handleDialogClose} 
-        dialogType="customReport" 
-      />
+
     </Grid>
   );
 };

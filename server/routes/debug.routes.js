@@ -3,6 +3,41 @@ import { query } from "../config/db.js";
 
 const router = express.Router();
 
+// Debug endpoint to check course data
+router.get("/course-debug", async (req, res) => {
+  try {
+    res.setHeader('Content-Type', 'application/json');
+    
+    // Get all courses with their status
+    const { rows: allCourses } = await query(`
+      SELECT id, title, is_published, is_approved, created_at
+      FROM courses
+      ORDER BY created_at DESC
+    `);
+    
+    // Get course stats
+    const { rows: courseStats } = await query(`
+      SELECT 
+        COUNT(*) as total_courses,
+        COUNT(CASE WHEN is_published = true AND is_approved = true THEN 1 END) as published_courses,
+        COUNT(CASE WHEN is_published = true AND is_approved = false THEN 1 END) as pending_courses,
+        COUNT(CASE WHEN is_published = false THEN 1 END) as draft_courses
+      FROM courses
+    `);
+    
+    res.json({
+      success: true,
+      data: {
+        allCourses,
+        courseStats: courseStats[0]
+      }
+    });
+  } catch (error) {
+    console.error('Course debug error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Debug endpoint to check quiz data
 router.get("/quiz-debug", async (req, res) => {
   try {

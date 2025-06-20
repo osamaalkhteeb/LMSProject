@@ -526,4 +526,68 @@ export const CourseController = {
         .json(createResponse(false, "Failed to upload course thumbnail"));
     }
   },
+
+  // Get courses grouped by category (Admin only)
+  async getCoursesByCategory(req, res) {
+    try {
+      if (req.user.role !== "admin") {
+        return res
+          .status(HTTP_STATUS.FORBIDDEN)
+          .json(createResponse(false, "Admin access required"));
+      }
+
+      const coursesByCategory = await CourseModel.getCoursesByCategory();
+      res.json(
+        createResponse(true, "Courses by category retrieved successfully", coursesByCategory)
+      );
+    } catch (error) {
+      console.error("Get courses by category error:", error);
+      res
+        .status(HTTP_STATUS.SERVER_ERROR)
+        .json(createResponse(false, "Failed to retrieve courses by category"));
+    }
+  },
+
+  // Get top performing courses (Admin only)
+  async getTopPerformingCourses(req, res) {
+    try {
+      if (req.user.role !== "admin") {
+        return res
+          .status(HTTP_STATUS.FORBIDDEN)
+          .json(createResponse(false, "Admin access required"));
+      }
+
+      const limit = parseInt(req.query.limit) || 10;
+      const topCourses = await CourseModel.getTopPerformingCourses(limit);
+      res.json(
+        createResponse(true, "Top performing courses retrieved successfully", topCourses)
+      );
+    } catch (error) {
+      console.error("Get top performing courses error:", error);
+      res
+        .status(HTTP_STATUS.SERVER_ERROR)
+        .json(createResponse(false, "Failed to retrieve top performing courses"));
+    }
+  },
+
+  // Get course trend data (Admin only)
+  async getCourseTrend(req, res) {
+    try {
+      if (req.user.role !== "admin") {
+        return res
+          .status(HTTP_STATUS.FORBIDDEN)
+          .json(createResponse(false, "Admin access required"));
+      }
+
+      const trendData = await CourseModel.getCourseTrend();
+      res.json(
+        createResponse(true, "Course trend data retrieved successfully", trendData)
+      );
+    } catch (error) {
+      console.error("Get course trend error:", error);
+      res
+        .status(HTTP_STATUS.SERVER_ERROR)
+        .json(createResponse(false, "Failed to retrieve course trend data"));
+    }
+  },
 };

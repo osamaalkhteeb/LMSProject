@@ -94,4 +94,20 @@ router.get("/admin/stats",
   CourseController.getCourseStats
 );
 
+router.get("/admin/categories", 
+  authorize(["admin"]),
+  CourseController.getCoursesByCategory
+);
+
+router.get("/admin/top-performing", 
+  authorize(["admin"]),
+  CourseController.getTopPerformingCourses
+);
+
+router.get("/admin/trend", 
+  authorize(["admin"]),
+  CourseController.getCourseTrend
+);
+
+
 export default router;

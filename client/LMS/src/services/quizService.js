@@ -1,4 +1,4 @@
-import apiClient from './apiClient.js';
+import apiClient from "./apiClient.js";
 
 // Get quiz details
 export const getQuiz = async (id) => {
@@ -51,14 +51,16 @@ export const getQuizAttempts = async (id) => {
 // Create quiz (Instructor/Admin only)
 export const createQuiz = async (courseId, lessonId, quizData) => {
   try {
-    console.log('Creating quiz with data:', { courseId, lessonId, quizData });
-    const response = await apiClient.post(`/quizzes/courses/${courseId}/lessons/${lessonId}/quizzes`, quizData);
-    console.log('Quiz creation response:', response.data);
+    const response = await apiClient.post(
+      `/quizzes/courses/${courseId}/lessons/${lessonId}/quizzes`,
+      quizData
+    );
+
     return response.data?.data || response.data;
   } catch (error) {
-    console.error('Error creating quiz:', error);
-    console.error('Error response:', error.response?.data);
-    console.error('Error status:', error.response?.status);
+    console.error("Error creating quiz:", error);
+    console.error("Error response:", error.response?.data);
+    console.error("Error status:", error.response?.status);
     throw error;
   }
 };
@@ -68,7 +70,6 @@ export const getQuizzesByLesson = async (lessonId) => {
   try {
     const response = await apiClient.get(`/quizzes/lessons/${lessonId}`);
     return response.data?.data || [];
-    
   } catch (error) {
     console.error(`Error fetching quizzes for lesson ${lessonId}:`, error);
     throw error;
@@ -117,5 +118,5 @@ export default {
   getQuizzesByLesson,
   updateQuiz,
   deleteQuiz,
-  getQuizSubmissions
+  getQuizSubmissions,
 };

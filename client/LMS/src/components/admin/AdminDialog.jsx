@@ -18,7 +18,46 @@ import {
   Cancel,
 } from "@mui/icons-material";
 
-const AdminDialog = ({ open, onClose, dialogType, currentItem }) => {
+const AdminDialog = ({ open, onClose, dialogType, currentItem, onSubmit }) => {
+  const [formData, setFormData] = React.useState({
+    name: '',
+    email: '',
+    role: 'STUDENT',
+    password: ''
+  });
+
+  React.useEffect(() => {
+    if (dialogType === 'editUser' && currentItem) {
+      setFormData({
+        name: currentItem.name || '',
+        email: currentItem.email || '',
+        role: currentItem.role ? currentItem.role.toUpperCase() : 'STUDENT',
+        password: ''
+      });
+    } else {
+      setFormData({
+        name: '',
+        email: '',
+        role: 'STUDENT',
+        password: ''
+      });
+    }
+  }, [dialogType, currentItem, open]);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = () => {
+    if (onSubmit) {
+      onSubmit(formData);
+    }
+  };
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>
@@ -30,7 +69,7 @@ const AdminDialog = ({ open, onClose, dialogType, currentItem }) => {
         {dialogType === "customReport" && "Create Custom Report"}
         {dialogType === "systemSettings" && "System Settings"}
         {dialogType === "changeStatus" && 
-          `${currentItem?.status === "Active" ? "Suspend" : "Activate"} User: ${currentItem?.name}`}
+          `${currentItem?.is_active ? "Suspend" : "Activate"} User: ${currentItem?.name}`}
         {dialogType === "deleteUser" && "Delete User"}
       </DialogTitle>
       <DialogContent>
@@ -57,7 +96,7 @@ const AdminDialog = ({ open, onClose, dialogType, currentItem }) => {
           </>
         ) : dialogType === "changeStatus" ? (
           <Typography>
-            {currentItem?.status === "Active" 
+            {currentItem?.is_active 
               ? `Suspend user ${currentItem?.name}? They will not be able to access the system until reactivated.`
               : `Activate user ${currentItem?.name}? They will regain full access to the system.`}
           </Typography>
@@ -68,7 +107,9 @@ const AdminDialog = ({ open, onClose, dialogType, currentItem }) => {
               required
               fullWidth
               label="Full Name"
-              defaultValue={dialogType === "editUser" ? currentItem?.name : ""}
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
               autoFocus
             />
             <TextField
@@ -76,8 +117,10 @@ const AdminDialog = ({ open, onClose, dialogType, currentItem }) => {
               required
               fullWidth
               label="Email"
+              name="email"
               type="email"
-              defaultValue={dialogType === "editUser" ? currentItem?.email : ""}
+              value={formData.email}
+              onChange={handleInputChange}
             />
             <TextField
               margin="normal"
@@ -85,14 +128,16 @@ const AdminDialog = ({ open, onClose, dialogType, currentItem }) => {
               fullWidth
               select
               label="Role"
-              defaultValue={dialogType === "editUser" ? currentItem?.role : "Student"}
+              name="role"
+              value={formData.role}
+              onChange={handleInputChange}
               SelectProps={{
                 native: true,
               }}
             >
-              <option value="Student">Student</option>
-              <option value="Instructor">Instructor</option>
-              <option value="Admin">Admin</option>
+              <option value="STUDENT">Student</option>
+              <option value="INSTRUCTOR">Instructor</option>
+              <option value="ADMIN">Admin</option>
             </TextField>
             {dialogType === "createUser" && (
               <TextField
@@ -100,7 +145,10 @@ const AdminDialog = ({ open, onClose, dialogType, currentItem }) => {
                 required
                 fullWidth
                 label="Password"
+                name="password"
                 type="password"
+                value={formData.password}
+                onChange={handleInputChange}
               />
             )}
           </Box>
@@ -199,10 +247,11 @@ const AdminDialog = ({ open, onClose, dialogType, currentItem }) => {
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
         <Button 
-          onClick={onClose} 
+          onClick={dialogType === "createUser" || dialogType === "editUser" ? handleSubmit : onSubmit} 
           variant="contained"
           color={
             dialogType === "deleteUser" ? "error" : 
+            dialogType === "changeStatus" && currentItem?.is_active ? "warning" :
             dialogType === "approveCourse" ? "success" : 
             dialogType === "rejectCourse" ? "error" : "primary"
           }
@@ -213,7 +262,7 @@ const AdminDialog = ({ open, onClose, dialogType, currentItem }) => {
           {dialogType === "rejectCourse" && "Reject"}
           {dialogType === "customReport" && "Generate"}
           {dialogType === "systemSettings" && "Save Settings"}
-          {dialogType === "changeStatus" && (currentItem?.status === "Active" ? "Suspend" : "Activate")}
+          {dialogType === "changeStatus" && (currentItem?.is_active ? "Suspend" : "Activate")}
           {dialogType === "deleteUser" && "Delete"}
           {dialogType === "viewCourse" && "Close"}
         </Button>

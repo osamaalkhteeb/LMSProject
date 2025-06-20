@@ -156,9 +156,7 @@ const QuizModel = {
           const correctOption = question.options.find((o) => o.is_correct);
           const selectedOptionId = userAnswer?.selected_options?.[0] || userAnswer?.selectedOptions?.[0] || userAnswer?.optionId || userAnswer.selected_options?.[0];
           
-          console.log(`Question ${question.id}: userAnswer =`, userAnswer);
-          console.log(`Question ${question.id}: selectedOptionId =`, selectedOptionId);
-          console.log(`Question ${question.id}: correctOption =`, correctOption);
+
           
           // Check if user provided an answer
           if (selectedOptionId === undefined || selectedOptionId === null) {
@@ -168,7 +166,7 @@ const QuizModel = {
             const selectedId = parseInt(selectedOptionId);
             const correctId = parseInt(correctOption?.id);
             
-            console.log(`Question ${question.id}: selectedId = ${selectedId}, correctId = ${correctId}`);
+
             
             if (isNaN(selectedId) || isNaN(correctId)) {
               isCorrect = false;
@@ -177,16 +175,14 @@ const QuizModel = {
             }
           }
           
-          console.log(`Question ${question.id}: isCorrect = ${isCorrect}`);
+
         }
         // For true/false questions
         else if (question.question_type === "true_false") {
           const correctOption = question.options.find((o) => o.is_correct);
           const selectedOptionId = userAnswer?.selected_options?.[0] || userAnswer?.selectedOptions?.[0] || userAnswer?.optionId || userAnswer.selected_options?.[0];
           
-          console.log(`Question ${question.id}: userAnswer =`, userAnswer);
-          console.log(`Question ${question.id}: selectedOptionId =`, selectedOptionId);
-          console.log(`Question ${question.id}: correctOption =`, correctOption);
+
           
           // Check if user provided an answer
           if (selectedOptionId === undefined || selectedOptionId === null) {
@@ -196,7 +192,7 @@ const QuizModel = {
             const selectedId = parseInt(selectedOptionId);
             const correctId = parseInt(correctOption?.id);
             
-            console.log(`Question ${question.id}: selectedId = ${selectedId}, correctId = ${correctId}`);
+
             
             if (isNaN(selectedId) || isNaN(correctId)) {
               isCorrect = false;
@@ -205,7 +201,7 @@ const QuizModel = {
             }
           }
           
-          console.log(`Question ${question.id}: isCorrect = ${isCorrect}`);
+
         }
         // For short answer questions
         else if (question.question_type === "short_answer") {
@@ -219,7 +215,7 @@ const QuizModel = {
           // Handle null points by defaulting to 1 point per question
           const pointsToAdd = question.points || 1;
           score += pointsToAdd;
-          console.log(`Question ${question.id}: Added ${pointsToAdd} points. Current score: ${score}`);
+
         }
         
         results.push({ questionId: question.id, isCorrect });
@@ -231,7 +227,7 @@ const QuizModel = {
       if (totalPoints > 0) {
         percentageScore = Math.round((score / totalPoints) * 100);
       }
-      console.log(`Final calculation: score=${score}, totalPoints=${totalPoints}, percentageScore=${percentageScore}`);
+
       
       // Ensure percentageScore is a valid number
       if (isNaN(percentageScore) || !isFinite(percentageScore)) {

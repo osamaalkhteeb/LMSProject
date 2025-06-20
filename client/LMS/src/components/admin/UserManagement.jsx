@@ -27,7 +27,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import CancelIcon from '@mui/icons-material/Cancel';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { getAllUsers, updateUserById, deleteUser } from "../../services/userService";
+import { getAllUsers, updateUserById, deleteUser, createUserByAdmin, toggleUserStatus } from "../../services/userService";
 
 import AdminDialog from "./AdminDialog";
 
@@ -51,12 +51,56 @@ const UserManagement = () => {
       setLoading(true);
       setError(null);
       const response = await getAllUsers();
-      setUsers(response.data.users || []);
+      setUsers(response || []);
     } catch (error) {
       console.error('Error fetching users:', error);
       setError('Failed to load users');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateUser = async (userData) => {
+    try {
+      await createUserByAdmin(userData);
+      await fetchUsers(); // Refresh the list
+      setOpenDialog(false);
+    } catch (error) {
+      console.error('Error creating user:', error);
+      setError('Failed to create user');
+    }
+  };
+
+  const handleUpdateUser = async (userData) => {
+    try {
+      await updateUserById(currentItem.id, userData);
+      await fetchUsers(); // Refresh the list
+      setOpenDialog(false);
+    } catch (error) {
+      console.error('Error updating user:', error);
+      setError('Failed to update user');
+    }
+  };
+
+  const handleToggleStatus = async () => {
+    try {
+      await toggleUserStatus(currentItem.id);
+      await fetchUsers(); // Refresh the list
+      setOpenDialog(false);
+    } catch (error) {
+      console.error('Error toggling user status:', error);
+      setError('Failed to update user status');
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    try {
+      await deleteUser(currentItem.id);
+      await fetchUsers(); // Refresh the list
+      setOpenDialog(false);
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      setError('Failed to delete user');
     }
   };
 
@@ -130,7 +174,10 @@ const UserManagement = () => {
                   <TableRow key={user.id}>
                     <TableCell>
                       <Box display="flex" alignItems="center" gap={2}>
-                        <Avatar sx={{ width: 32, height: 32 }}>
+                        <Avatar 
+                          src={user.avatar_url} 
+                          sx={{ width: 32, height: 32 }}
+                        >
                           <PersonIcon />
                         </Avatar>
                         {user.name}
@@ -144,18 +191,19 @@ const UserManagement = () => {
                         size="small"
                       />
                     </TableCell>
-                    <TableCell>{user.joinDate}</TableCell>
+                    <TableCell>
+                      {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
+                    </TableCell>
                     <TableCell>
                       <Chip 
-                        label={user.status} 
-                        color={
-                          user.status === "Active" ? "success" : 
-                          user.status === "Suspended" ? "error" : "warning"
-                        } 
+                        label={user.is_active ? "Active" : "Inactive"} 
+                        color={user.is_active ? "success" : "error"} 
                         size="small"
                       />
                     </TableCell>
-                    <TableCell>{user.lastLogin}</TableCell>
+                    <TableCell>
+                      {user.last_login_at ? new Date(user.last_login_at).toLocaleDateString() : 'Never'}
+                    </TableCell>
                     <TableCell>
                       <IconButton
                         aria-label="more"
@@ -189,11 +237,11 @@ const UserManagement = () => {
         </MenuItem>
         <MenuItem onClick={() => handleDialogOpen("changeStatus")}>
           <ListItemIcon>
-            {currentItem?.status === "Active" ? 
+            {currentItem?.is_active ? 
               <CancelIcon fontSize="small" color="warning" /> : 
               <CheckCircleIcon fontSize="small" color="success" />}
           </ListItemIcon>
-          {currentItem?.status === "Active" ? "Suspend User" : "Activate User"}
+          {currentItem?.is_active ? "Suspend User" : "Activate User"}
         </MenuItem>
         <MenuItem onClick={() => handleDialogOpen("deleteUser")}>
           <ListItemIcon>
@@ -207,7 +255,14 @@ const UserManagement = () => {
         open={openDialog} 
         onClose={handleDialogClose} 
         dialogType={dialogType} 
-        currentItem={currentItem} 
+        currentItem={currentItem}
+        onSubmit={
+          dialogType === "createUser" ? handleCreateUser :
+          dialogType === "editUser" ? handleUpdateUser :
+          dialogType === "changeStatus" ? handleToggleStatus :
+          dialogType === "deleteUser" ? handleDeleteUser :
+          null
+        }
       />
     </>
   );
