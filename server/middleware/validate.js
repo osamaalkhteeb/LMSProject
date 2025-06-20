@@ -12,15 +12,24 @@ export const validateRequest =
         ? req.query
         : req.body;
 
-    console.log(`[Validation] Source: ${source}, Original data:`, dataToValidate);
+
     
-    const { error, value } = schema.validate(dataToValidate, {
+    // Add context for file upload validation
+    const validationOptions = {
       abortEarly: false,
       stripUnknown: true, // Remove unknown fields for security
-    });
+      context: {
+        hasFile: !!req.file // Pass file upload status as context
+      }
+    };
+    
+    const { error, value } = schema.validate(dataToValidate, validationOptions);
 
     if (error) {
-      console.log('[Validation] Validation errors:', error.details);
+      console.log("Validation Error Details:");
+      console.log("Data being validated:", JSON.stringify(dataToValidate, null, 2));
+      console.log("Validation errors:", error.details);
+
       const errors = error.details.map((detail) => ({
         field: detail.path.join("."),
         message: detail.message,
@@ -30,7 +39,7 @@ export const validateRequest =
         .json(createResponse(false, "Validation failed", null, errors));
     }
     
-    console.log(`[Validation] Transformed data:`, value);
+
     
     // Apply validated and transformed values back to request
     if (source === "params") {
@@ -44,7 +53,7 @@ export const validateRequest =
       req.body = value;
     }
     
-    console.log(`[Validation] Applied to req.${source}:`, value);
+
     next();
   };
 
@@ -89,7 +98,12 @@ export const schema = {
   register: Joi.object({
     name: Joi.string().min(3).max(100).required(),
     email: Joi.string().email().required(),
-    password: Joi.string().min(6).required(),
+    password: Joi.string().min(6)
+      .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).+$/)
+      .required()
+      .messages({
+        'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
+      }),
   }),
 
   login: Joi.object({
@@ -100,7 +114,12 @@ export const schema = {
   createUser: Joi.object({
     name: Joi.string().min(3).max(100).required(),
     email: Joi.string().email().required(),
-    password: Joi.string().min(6).required(),
+    password: Joi.string().min(6)
+      .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).+$/)
+      .required()
+      .messages({
+        'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
+      }),
     role: Joi.string().valid("student", "instructor", "admin", "STUDENT", "INSTRUCTOR", "ADMIN").default("student").custom((value, helpers) => {
       return value.toLowerCase();
     }),
@@ -123,7 +142,12 @@ export const schema = {
 
   changePassword: Joi.object({
     currentPassword: Joi.string().required(),
-    newPassword: Joi.string().min(6).required(),
+    newPassword: Joi.string().min(6)
+      .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).+$/)
+      .required()
+      .messages({
+        'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
+      }),
   }),
 
   // Course schemas
@@ -199,7 +223,11 @@ export const schema = {
     contentType: Joi.string().valid("video", "quiz", "text", "assignment").required(),
     contentUrl: Joi.string().uri().when("contentType", {
       is: Joi.string().valid("video", "text"),
-      then: Joi.required(),
+      then: Joi.when(Joi.ref("$hasFile"), {
+        is: true,
+        then: Joi.optional().allow(""),
+        otherwise: Joi.required()
+      }),
       otherwise: Joi.optional().allow(""),
     }),
     duration: Joi.number().integer().min(0).optional(),
@@ -218,28 +246,28 @@ export const schema = {
   // Enhanced Quiz schemas with better validation
   createQuiz: Joi.object({
     title: Joi.string().min(3).max(150).required(),
-    passingScore: Joi.number().integer().min(0).max(100).default(50), // Changed to camelCase
-    timeLimit: Joi.number().integer().min(1).optional(), // Changed to camelCase
-    maxAttempts: Joi.number().integer().min(1).optional(), // Added maxAttempts in camelCase
+    passing_score: Joi.number().integer().min(0).max(100).default(50),
+    time_limit: Joi.number().integer().min(1).optional(),
+    max_attempts: Joi.number().integer().min(1).optional(),
     questions: Joi.array()
       .items(
         Joi.object({
-          text: Joi.string().min(10).required(),
-          type: Joi.string()
+          question_text: Joi.string().min(10).required(),
+          question_type: Joi.string()
             .valid("multiple_choice", "true_false", "short_answer")
             .required(),
           points: Joi.number().integer().min(1).default(1),
           options: Joi.array()
             .items(
               Joi.object({
-                text: Joi.string().required(),
-                isCorrect: Joi.boolean().required(), // Changed to camelCase
+                option_text: Joi.string().required(),
+                is_correct: Joi.boolean().required(),
               })
             )
-            .when("type", {
+            .when("question_type", {
               is: "multiple_choice",
               then: Joi.array().min(2).required(),
-              otherwise: Joi.when("type", {
+              otherwise: Joi.when("question_type", {
                 is: "true_false",
                 then: Joi.array().length(2).required(),
                 otherwise: Joi.optional(),
@@ -252,31 +280,37 @@ export const schema = {
   }),
 
   updateQuiz: Joi.object({
+    id: Joi.number().integer().optional(),
     title: Joi.string().min(3).max(150).optional(),
-    passingScore: Joi.number().integer().min(0).max(100).optional(), // Changed to camelCase
-    timeLimit: Joi.number().integer().min(1).optional(), // Changed to camelCase
-    maxAttempts: Joi.number().integer().min(1).optional(), // Added maxAttempts in camelCase
+    passing_score: Joi.number().integer().min(0).max(100).optional(),
+    time_limit: Joi.number().integer().min(1).allow(null).optional(),
+    max_attempts: Joi.number().integer().min(1).optional(),
+    lesson_title: Joi.string().optional(),
+    course_title: Joi.string().optional(),
+    attemptInfo: Joi.object().optional(),
     questions: Joi.array()
       .items(
         Joi.object({
           id: Joi.number().integer().optional(),
-          text: Joi.string().min(10).required(),
-          type: Joi.string()
+          question_text: Joi.string().min(10).required(),
+          question_type: Joi.string()
             .valid("multiple_choice", "true_false", "short_answer")
             .required(),
           points: Joi.number().integer().min(1).default(1),
+          orderNum: Joi.number().integer().min(1).optional(),
           options: Joi.array()
             .items(
               Joi.object({
                 id: Joi.number().integer().optional(),
-                text: Joi.string().required(),
-                isCorrect: Joi.boolean().required(), // Changed to camelCase
+                option_text: Joi.string().required(),
+                is_correct: Joi.boolean().required(),
+                order_num: Joi.number().integer().optional(),
               })
             )
-            .when("type", {
+            .when("question_type", {
               is: "multiple_choice",
               then: Joi.array().min(2).required(),
-              otherwise: Joi.when("type", {
+              otherwise: Joi.when("question_type", {
                 is: "true_false",
                 then: Joi.array().length(2).required(),
                 otherwise: Joi.optional(),

@@ -2,13 +2,13 @@ import { query } from "../config/db.js";
 
 const LessonModel = {
   // Create a lesson
-  async create({ moduleId, title, contentType, contentUrl, duration, orderNum }) {
+  async create({ moduleId, title, contentType, contentUrl, duration, orderNum, cloudinaryPublicId }) {
     const { rows } = await query(
       `INSERT INTO lessons 
-       (module_id, title, content_type, content_url, duration, order_num)
-       VALUES ($1, $2, $3, $4, $5, $6)
+       (module_id, title, content_type, content_url, duration, order_num, cloudinary_public_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [moduleId, title, contentType, contentUrl, duration, orderNum]
+      [moduleId, title, contentType, contentUrl, duration, orderNum, cloudinaryPublicId]
     );
     return rows[0];
   },
@@ -28,7 +28,7 @@ const LessonModel = {
   },
   
   // Update a lesson
-  async update(lessonId, { title, contentType, contentUrl, duration, orderNum, passingScore, timeLimit, maxAttempts, description, points, deadline }) {
+  async update(lessonId, { title, contentType, contentUrl, duration, orderNum, passing_score, time_limit, max_attempts, description, points, deadline }) {
     // Start transaction
     await query('BEGIN');
     
@@ -47,7 +47,7 @@ const LessonModel = {
       );
       
       // Handle quiz-specific fields
-      if (contentType === 'quiz' && (passingScore !== undefined || timeLimit !== undefined || maxAttempts !== undefined)) {
+      if (contentType === 'quiz' && (passing_score !== undefined || time_limit !== undefined || max_attempts !== undefined)) {
         // Check if quiz exists
         const { rows: existingQuiz } = await query(
           `SELECT id FROM quizzes WHERE lesson_id = $1`,
@@ -63,14 +63,14 @@ const LessonModel = {
                  time_limit = COALESCE($3, time_limit),
                  max_attempts = COALESCE($4, max_attempts)
              WHERE lesson_id = $5`,
-            [title, passingScore, timeLimit, maxAttempts, lessonId]
+            [title, passing_score, time_limit, max_attempts, lessonId]
           );
         } else {
           // Create new quiz
           await query(
             `INSERT INTO quizzes (lesson_id, title, passing_score, time_limit, max_attempts)
              VALUES ($1, $2, $3, $4, $5)`,
-            [lessonId, title, passingScore || 70, timeLimit || 30, maxAttempts || 3]
+            [lessonId, title, passing_score || 70, time_limit || 30, max_attempts || 3]
           );
         }
       }

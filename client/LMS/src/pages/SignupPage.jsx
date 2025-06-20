@@ -16,45 +16,46 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { useFormHandler } from '../hooks/useFormHandler';
+import { validateEmail, validateRequired, validatePassword, validatePasswordMatch } from '../utils/validation';
 
 const SignupPage = () => {
-  const { register, loading, errors } = useAuth();
+  const { register, loading } = useAuth();
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    role: 'student' // Default role
-  });
-  const [localError, setLocalError] = useState('');
-
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+  
+  // Form validation rules
+  const validationRules = {
+    name: [(value) => validateRequired(value, 'Name')],
+    email: [validateEmail],
+    password: [validatePassword],
+    confirmPassword: [(value, formData) => validatePasswordMatch(value, formData.password)]
   };
+  
+  // Use the form handler hook
+  const {
+    formData,
+    errors,
+    isSubmitting,
+    submitError,
+    submitSuccess,
+    handleChange,
+    handleSubmit
+  } = useFormHandler(
+    {
+      name: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      role: 'student'
+    },
+    validationRules
+  );
 
-  const handleSubmit = async (event) => {
+  const onSubmit = async (event) => {
     event.preventDefault();
-    setLocalError('');
     
-    // Validate passwords match
-    if (formData.password !== formData.confirmPassword) {
-      setLocalError('Passwords do not match');
-      return;
-    }
-    
-    // Validate password length
-    if (formData.password.length < 6) {
-      setLocalError('Password must be at least 6 characters long');
-      return;
-    }
-    
-    try {
-      const { confirmPassword, ...registrationData } = formData;
+    return handleSubmit(async (data) => {
+      const { confirmPassword, ...registrationData } = data;
       const result = await register(registrationData);
       
       // Redirect to appropriate dashboard based on user role
@@ -68,9 +69,9 @@ const SignupPage = () => {
       } else {
         navigate('/login');
       }
-    } catch (error) {
-      console.error('Registration failed:', error);
-    }
+      
+      return result;
+    });
   };
 
   const handleBackToHome = () => {
@@ -169,7 +170,19 @@ const SignupPage = () => {
               Create an Account
             </Typography>
 
-            <Box component="form" onSubmit={handleSubmit} noValidate>
+            {submitError && (
+              <Alert severity="error" sx={{ mb: 3 }}>
+                {submitError}
+              </Alert>
+            )}
+            
+            {submitSuccess && (
+              <Alert severity="success" sx={{ mb: 3 }}>
+                {submitSuccess}
+              </Alert>
+            )}
+
+            <Box component="form" onSubmit={onSubmit} noValidate>
               {/* Name */}
               <TextField
                 margin="normal"
@@ -185,6 +198,9 @@ const SignupPage = () => {
                 autoFocus
                 size="medium"
                 sx={{ mb: 2 }}
+                disabled={loading || isSubmitting}
+                error={!!errors.name}
+                helperText={errors.name}
               />
 
               {/* Email */}
@@ -202,6 +218,9 @@ const SignupPage = () => {
                 autoComplete="email"
                 size="medium"
                 sx={{ mb: 2 }}
+                disabled={loading || isSubmitting}
+                error={!!errors.email}
+                helperText={errors.email}
               />
 
               {/* Password */}
@@ -219,6 +238,9 @@ const SignupPage = () => {
                 autoComplete="new-password"
                 size="medium"
                 sx={{ mb: 2 }}
+                disabled={loading || isSubmitting}
+                error={!!errors.password}
+                helperText={errors.password}
               />
 
               {/* Confirm Password */}
@@ -236,13 +258,11 @@ const SignupPage = () => {
                 autoComplete="new-password"
                 size="medium"
                 sx={{ mb: 2 }}
+                disabled={loading || isSubmitting}
+                error={!!errors.confirmPassword}
+                helperText={errors.confirmPassword}
               />
-              {/* Error Display */}
-               {(localError || errors.register) && (
-                 <Alert severity="error" sx={{ mb: 2 }}>
-                   {localError || errors.register}
-                 </Alert>
-               )}
+
 
               {/* Submit Button */}
               <Button
@@ -250,7 +270,7 @@ const SignupPage = () => {
                 fullWidth
                 variant="contained"
                 size="large"
-                disabled={loading}
+                disabled={loading || isSubmitting}
                 sx={{ 
                   mt: 2,
                   mb: 3,
@@ -265,7 +285,7 @@ const SignupPage = () => {
                   }
                 }}
               >
-                {loading ? (
+                {(loading || isSubmitting) ? (
                   <CircularProgress size={24} color="inherit" />
                 ) : (
                   'Sign Up'

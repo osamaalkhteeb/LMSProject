@@ -109,7 +109,17 @@ export const getQuizSubmissions = async (id) => {
   }
 };
 
-export default {
+const quizService = {
+  // Get all quizzes for the authenticated user
+  async getUserQuizzes() {
+    try {
+      const response = await apiClient.get('/quizzes/user');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching user quizzes:', error);
+      throw error;
+    }
+  },
   getQuiz,
   submitQuiz,
   getQuizResults,
@@ -120,3 +130,5 @@ export default {
   deleteQuiz,
   getQuizSubmissions,
 };
+
+export default quizService;

@@ -283,7 +283,7 @@ const Header = ({ mode, toggleDarkMode }) => {
                 cursor: 'pointer',
                 '&:hover': { opacity: 0.8 }
               }}
-              onClick={() => navigate('/')}
+              onClick={() => user ? handleDashboardClick() : navigate('/')}
             >
               <SchoolIcon sx={{ mr: 1, fontSize: 28 }} />
               <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold' }}>

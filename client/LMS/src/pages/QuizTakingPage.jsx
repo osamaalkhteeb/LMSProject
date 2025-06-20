@@ -102,10 +102,10 @@ const QuizTakingPage = () => {
         // For short answer, answer should be a non-empty trimmed string
         if (question.question_type === 'multiple_choice' || question.question_type === 'true_false') {
           return answer === undefined || answer === null || answer === '';
-        } else {
+        } /* else {
           // For short answer questions
           return !answer || (typeof answer === 'string' && answer.trim() === '');
-        }
+        } */
       });
       
       if (unansweredQuestions.length > 0) {
@@ -126,14 +126,14 @@ const QuizTakingPage = () => {
             questionId: parseInt(questionId),
             selected_options: [optionId]
           };
-        } else {
+        } /* else {
           // For short answer questions
           return {
             questionId: parseInt(questionId),
             answerText: answer,
             selected_options: []
           };
-        }
+        } */
       });
       
       await submitQuiz(quizId, formattedAnswers, quizStartTime);
@@ -248,7 +248,7 @@ const QuizTakingPage = () => {
                 color="warning"
               />
             )}
-            {quiz.attemptInfo && quiz.attemptInfo.maxAttempts && (
+            {quiz.attemptInfo && quiz.attemptInfo.max_attempts && (
               <Chip 
                 icon={<WarningIcon />} 
                 label={`${quiz.attemptInfo.remainingAttempts} attempts left`} 
@@ -285,7 +285,7 @@ const QuizTakingPage = () => {
             <Box sx={{ mt: 3, textAlign: 'center' }}>
               <Alert severity="error" sx={{ mb: 2 }}>
                 {quiz.attemptInfo?.remainingAttempts === 0 
-                  ? `You have reached the maximum number of attempts (${quiz.attemptInfo.maxAttempts}) for this quiz.`
+                  ? `You have reached the maximum number of attempts (${quiz.attemptInfo.max_attempts}) for this quiz.`
                   : 'Unable to verify attempt status. Please try again later.'}
               </Alert>
               <Button 
@@ -400,7 +400,7 @@ const QuizTakingPage = () => {
             </RadioGroup>
           )}
 
-          {currentQuestion.question_type === 'short_answer' && (
+          {/* currentQuestion.question_type === 'short_answer' && (
             <TextField
               fullWidth
               multiline
@@ -411,7 +411,7 @@ const QuizTakingPage = () => {
               variant="outlined"
               sx={{ mt: 2 }}
             />
-          )}
+          )} */}
         </Box>
 
         {/* Navigation Buttons */}

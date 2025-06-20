@@ -6,6 +6,19 @@ import { createResponse } from "../utils/helper.js";
 import { HTTP_STATUS } from "../config/constants.js";
 
 export const QuizController = {
+  // Get all quizzes for user's enrolled courses with attempts
+  async getUserQuizzes(req, res) {
+    try {
+      const userId = req.user.id;
+      const quizzes = await QuizModel.getUserQuizzesWithAttempts(userId);
+      res.json(createResponse(true, "User quizzes retrieved", quizzes));
+    } catch (error) {
+      console.error("Get user quizzes error:", error);
+      res.status(HTTP_STATUS.SERVER_ERROR).json(
+        createResponse(false, "Failed to fetch user quizzes")
+      );
+    }
+  },
   // Get quizzes by lesson
   async getByLesson(req, res) {
     try {
@@ -73,18 +86,20 @@ export const QuizController = {
 
       // Get quiz details to find the associated lesson
       const quiz = await QuizModel.getById(quizId);
+  
       
-      // If quiz is passed, mark the associated lesson as complete
-      if (result.passed && quiz.lesson_id) {
-        const LessonCompletionModel = require('../models/lessonCompletion.model');
+      // Mark the associated lesson as complete on first submission (regardless of pass/fail)
+      if (quiz.lesson_id) {
         try {
-          await LessonCompletionModel.markComplete(req.user.id, quiz.lesson_id);
+          console.log('Marking lesson as complete:', { userId: req.user.id, lessonId: quiz.lesson_id, quizId });
+          const completionResult = await LessonCompletionModel.markComplete(req.user.id, quiz.lesson_id);
+          console.log('Lesson completion result:', completionResult);
         } catch (error) {
-          // Ignore if already completed
-          if (!error.message.includes('already completed')) {
-            console.error('Error marking quiz lesson as complete:', error);
-          }
+          console.error('Error marking quiz lesson as complete:', error);
+          // Don't ignore any errors for debugging
         }
+      } else {
+        console.log('No lesson_id found for quiz:', { quizId, quiz });
       }
 
       // Update course progress

@@ -4,7 +4,10 @@ import { QuizController } from "../controllers/quiz.controller.js";
 import { authenticate, authorize } from "../middleware/auth.js";
 import { schema, validateRequest } from "../middleware/validate.js";
 
-const router = express.Router()
+const router = express.Router();
+
+// Get all quizzes for authenticated user
+router.get("/user", authenticate, QuizController.getUserQuizzes);
 
 // Get quizzes for a lesson
 router.get(

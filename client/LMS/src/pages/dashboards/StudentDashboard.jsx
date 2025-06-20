@@ -89,10 +89,31 @@ const StudentDashboard = () => {
     }
   };
 
-  const handleCourseSelect = useCallback((course) => {
-    setSelectedCourse(course);
-    setCurrentLesson(null);
-    setCurrentVideo(null);
+  const handleCourseSelect = useCallback(async (course) => {
+    try {
+      // Fetch complete course data for better course information
+      const { getCourse } = await import('../../services/courseService');
+      const fullCourseData = await getCourse(course.id);
+      
+      // Combine enrollment data with full course data
+      const courseWithEnrollmentData = {
+        ...fullCourseData,
+        progress: course.progress,
+        enrollmentId: course.enrollmentId,
+        enrolledAt: course.enrolledAt,
+        completedAt: course.completedAt
+      };
+      
+      setSelectedCourse(courseWithEnrollmentData);
+      setCurrentLesson(null);
+      setCurrentVideo(null);
+    } catch (error) {
+      console.error('Error fetching course details:', error);
+      // Fallback to basic course data if fetch fails
+      setSelectedCourse(course);
+      setCurrentLesson(null);
+      setCurrentVideo(null);
+    }
   }, []);
 
   const handleProgressUpdate = (newProgress) => {
@@ -101,6 +122,8 @@ const StudentDashboard = () => {
         ...prev,
         progress: newProgress
       }));
+      // Refresh enrollments to keep the course list in sync with updated progress
+      refetchEnrollments();
     }
   };
 

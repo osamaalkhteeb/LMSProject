@@ -48,6 +48,7 @@ import {
   CloudUpload as UploadIcon,
   Visibility as ViewIcon,
 } from "@mui/icons-material";
+import MediaPlayer from './MediaPlayer';
 import { useNavigate } from "react-router-dom";
 import { useMarkLessonComplete, useUnmarkLessonComplete, useCompletedLessonsByCourse } from '../../hooks/useLessonCompletion';
 
@@ -59,6 +60,9 @@ const CourseDetailsView = ({ selectedCourse, onBack, onProgressUpdate }) => {
   const [quizStatuses, setQuizStatuses] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submissionFile, setSubmissionFile] = useState(null);
+  const [mediaPlayerOpen, setMediaPlayerOpen] = useState(false);
+  const [selectedLesson, setSelectedLesson] = useState(null);
+
   const navigate = useNavigate();
   
   // Lesson completion hooks
@@ -66,25 +70,29 @@ const CourseDetailsView = ({ selectedCourse, onBack, onProgressUpdate }) => {
   const { unmarkComplete } = useUnmarkLessonComplete();
   const { completedLessons, refetch: refetchCompletedLessons } = useCompletedLessonsByCourse(selectedCourse?.id);
 
+
+
   // Fetch assignment and quiz statuses when course changes
   useEffect(() => {
     if (selectedCourse?.modules) {
       fetchAssignmentStatuses();
       fetchQuizStatuses();
+      refetchCompletedLessons();
     }
-  }, [selectedCourse]);
+  }, [selectedCourse, refetchCompletedLessons]);
 
-  // Refresh quiz statuses when component regains focus (user returns from quiz)
+  // Refresh quiz statuses and lesson completion when component regains focus (user returns from quiz)
   useEffect(() => {
     const handleFocus = () => {
       if (selectedCourse?.modules) {
         fetchQuizStatuses();
+        refetchCompletedLessons();
       }
     };
 
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [selectedCourse]);
+  }, [selectedCourse, refetchCompletedLessons]);
 
   const fetchAssignmentStatuses = async () => {
     try {
@@ -118,21 +126,26 @@ const CourseDetailsView = ({ selectedCourse, onBack, onProgressUpdate }) => {
 
   const fetchQuizStatuses = async () => {
     try {
-      const { getQuizResults } = await import('../../services/quizService');
+      const { getQuizResults, getQuizAttempts } = await import('../../services/quizService');
       const statuses = {};
       
       for (const module of selectedCourse.modules) {
         if (module.quizzes) {
           for (const quiz of module.quizzes) {
             try {
+              // Get all attempts to count them properly
+              const attempts = await getQuizAttempts(quiz.id);
+              // Get results to check if passed
               const results = await getQuizResults(quiz.id);
+              
               // Check if user has passed the quiz (score >= passing_score)
               const passed = results && results.length > 0 && 
-                           results.some(result => result.score >= (quiz.passing_score || 60));
+                           results.some(result => result.score >= (quiz.passing_score || 50));
+              
               statuses[quiz.id] = {
                 passed: passed,
-                attempts: results?.length || 0,
-                bestScore: results?.length > 0 ? Math.max(...results.map(r => r.score)) : 0
+                attempts: attempts?.length || 0,
+                bestScore: attempts?.length > 0 ? Math.max(...attempts.map(a => a.score)) : 0
               };
             } catch (error) {
               console.warn(`Failed to fetch results for quiz ${quiz.id}:`, error);
@@ -249,7 +262,7 @@ const CourseDetailsView = ({ selectedCourse, onBack, onProgressUpdate }) => {
     setSubmissionFile(null);
   };
 
-  // Handle lesson click - mark as complete and navigate if needed
+  // Handle lesson click - open content without auto-marking as complete
   const handleLessonClick = async (lesson) => {
     try {
       // Handle navigation based on lesson type
@@ -268,22 +281,10 @@ const CourseDetailsView = ({ selectedCourse, onBack, onProgressUpdate }) => {
           handleAssignmentSelect(assignment);
         }
       } else if (lesson.content_url) {
-        // For video or text content, mark as complete when clicked and open content
-        const isAlreadyCompleted = completedLessons?.some(completed => completed.lesson_id === lesson.id);
-        
-        if (!isAlreadyCompleted) {
-          // Mark lesson as complete
-          const result = await markComplete(lesson.id);
-          // Refresh completed lessons list
-          await refetchCompletedLessons();
-          // Update course progress in parent component
-          if (result?.progress !== undefined && onProgressUpdate) {
-            onProgressUpdate(result.progress);
-          }
-        }
-        
-        // Open content in new tab
-        window.open(lesson.content_url, '_blank');
+        // For video or text content, open in media player
+        // Do NOT auto-mark as complete - let user manually mark when done
+        setSelectedLesson(lesson);
+        setMediaPlayerOpen(true);
       } else {
         // For other content types (text lessons without URL), mark as complete when clicked
         const isAlreadyCompleted = completedLessons?.some(completed => completed.lesson_id === lesson.id);
@@ -350,10 +351,10 @@ const CourseDetailsView = ({ selectedCourse, onBack, onProgressUpdate }) => {
         });
       }
       
-      // Count passed quizzes
+      // Count completed quizzes (based on lesson completion, not pass status)
       if (module.quizzes) {
         module.quizzes.forEach(quiz => {
-          if (quizStatuses[quiz.id]?.passed) {
+          if (isLessonCompleted(quiz.lesson_id)) {
             completedCount++;
           }
         });
@@ -374,9 +375,26 @@ const CourseDetailsView = ({ selectedCourse, onBack, onProgressUpdate }) => {
 
   // Function to get the appropriate icon for lesson content type
   const getLessonIcon = (contentType, isCompleted = false) => {
+    const getIconColor = (contentType, isCompleted) => {
+      if (isCompleted) return "success";
+      
+      switch (contentType) {
+        case 'video':
+          return "primary";
+        case 'quiz':
+          return "warning";
+        case 'assignment':
+          return "secondary";
+        case 'text':
+          return "secondary";
+        default:
+          return "action";
+      }
+    };
+
     const iconProps = {
       fontSize: "medium",
-      color: isCompleted ? "success" : "action"
+      color: getIconColor(contentType, isCompleted)
     };
 
     switch (contentType) {
@@ -423,6 +441,20 @@ const CourseDetailsView = ({ selectedCourse, onBack, onProgressUpdate }) => {
       } catch (error) {
         console.error('Error unmarking lesson:', error);
       }
+    }
+  };
+
+  // Handle marking lesson as complete from MediaPlayer
+  const handleMarkLessonComplete = async (lessonId) => {
+    try {
+      const result = await markComplete(lessonId);
+      await refetchCompletedLessons();
+      // Update course progress in parent component
+      if (result?.progress !== undefined && onProgressUpdate) {
+        onProgressUpdate(result.progress);
+      }
+    } catch (error) {
+      console.error('Error marking lesson as complete:', error);
     }
   };
 
@@ -556,9 +588,9 @@ const CourseDetailsView = ({ selectedCourse, onBack, onProgressUpdate }) => {
                   <TableContainer>
                     <Table size="small">
                       <TableBody>
-                        {/* Lessons - filtering out assignment type lessons to avoid duplication */}
+                        {/* Lessons - filtering out assignment and quiz type lessons to avoid duplication */}
                         {module.lessons && module.lessons
-                          .filter(lesson => lesson.content_type !== 'assignment')
+                          .filter(lesson => lesson.content_type !== 'assignment' && lesson.content_type !== 'quiz')
                           .map((lesson) => {
                           const isCompleted = isLessonCompleted(lesson.id);
                           
@@ -628,6 +660,8 @@ const CourseDetailsView = ({ selectedCourse, onBack, onProgressUpdate }) => {
                         {module.quizzes && module.quizzes.map((quiz) => {
                           const quizStatus = quizStatuses[quiz.id] || { passed: false, attempts: 0, bestScore: 0 };
                           const isPassed = quizStatus.passed;
+                          const isAttempted = quizStatus.attempts > 0;
+                          const isCompleted = isPassed || isAttempted;
                           
                           return (
                             <TableRow
@@ -636,18 +670,18 @@ const CourseDetailsView = ({ selectedCourse, onBack, onProgressUpdate }) => {
                               onClick={() => navigate(`/quiz/${quiz.id}`)}
                               sx={{ 
                                 cursor: "pointer",
-                                textDecoration: isPassed ? "line-through" : "none",
-                                opacity: isPassed ? 0.7 : 1,
-                                backgroundColor: isPassed ? 'action.hover' : 'transparent',
+                                textDecoration: isCompleted ? "line-through" : "none",
+                                opacity: isCompleted ? 0.7 : 1,
+                                backgroundColor: isCompleted ? 'action.hover' : 'transparent',
                                 '&:hover': {
-                                  backgroundColor: isPassed ? 'action.selected' : 'action.hover'
+                                  backgroundColor: isCompleted ? 'action.selected' : 'action.hover'
                                 }
                               }}
                             >
                               <TableCell sx={{ width: 50, pl: 3 }}>
                                 <Quiz 
                                   fontSize="medium" 
-                                  color={isPassed ? "success" : "action"}
+                                  color={isCompleted ? "success" : "warning"}
                                 />
                               </TableCell>
                               <TableCell>
@@ -655,13 +689,13 @@ const CourseDetailsView = ({ selectedCourse, onBack, onProgressUpdate }) => {
                                   <Typography 
                                     variant="body1"
                                     sx={{
-                                      textDecoration: isPassed ? "line-through" : "none",
-                                      color: isPassed ? "text.secondary" : "text.primary"
+                                      textDecoration: isCompleted ? "line-through" : "none",
+                                      color: isCompleted ? "text.secondary" : "text.primary"
                                     }}
                                   >
                                     {quiz.title}
                                   </Typography>
-                                  {isPassed && <CheckCircleOutline color="success" fontSize="small" />}
+                                  {isCompleted && <CheckCircleOutline color="success" fontSize="small" />}
                                 </Box>
                                 
                                 {quiz.time_limit && (
@@ -701,10 +735,19 @@ const CourseDetailsView = ({ selectedCourse, onBack, onProgressUpdate }) => {
                                 {!isPassed && quizStatus.attempts > 0 && (
                                   <Typography
                                     variant="caption"
-                                    color="warning.main"
+                                    color="error.main"
                                     display="block"
                                   >
-                                    {quizStatus.attempts} attempt{quizStatus.attempts > 1 ? 's' : ''}
+                                    Failed ({quizStatus.bestScore}%)
+                                  </Typography>
+                                )}
+                                {!isPassed && quizStatus.attempts === 0 && (
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    display="block"
+                                  >
+                                    Not attempted
                                   </Typography>
                                 )}
                               </TableCell>
@@ -736,7 +779,7 @@ const CourseDetailsView = ({ selectedCourse, onBack, onProgressUpdate }) => {
                               <TableCell sx={{ width: 50, pl: 3 }}>
                                 <Assignment 
                                   fontSize="medium" 
-                                  color={isSubmitted ? "success" : isOverdue ? "error" : "action"}
+                                  color={isSubmitted ? "success" : isOverdue ? "error" : "secondary"}
                                 />
                               </TableCell>
                               <TableCell>
@@ -999,6 +1042,18 @@ const CourseDetailsView = ({ selectedCourse, onBack, onProgressUpdate }) => {
           )}
         </DialogActions>
       </Dialog>
+      
+      {/* Media Player for Video and PDF Content */}
+      <MediaPlayer
+        open={mediaPlayerOpen}
+        onClose={() => {
+          setMediaPlayerOpen(false);
+          setSelectedLesson(null);
+        }}
+        lesson={selectedLesson}
+        onMarkComplete={handleMarkLessonComplete}
+        isCompleted={selectedLesson ? isLessonCompleted(selectedLesson.id) : false}
+      />
     </Container>
   );
 };

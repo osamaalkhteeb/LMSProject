@@ -1,4 +1,5 @@
 import { query } from "../config/db.js";
+import { deleteVideo, deleteDocument } from "../config/cloudinary.js";
 
 const ModuleModel = {
   // Create a new module
@@ -142,6 +143,26 @@ const ModuleModel = {
     try {
       // Delete all lessons in this module
       if (lessons.length > 0) {
+        // Get lessons with Cloudinary public IDs before deleting
+        const { rows: lessonsToDelete } = await query(
+          "SELECT cloudinary_public_id, content_type FROM lessons WHERE module_id = $1 AND cloudinary_public_id IS NOT NULL",
+          [moduleId]
+        );
+        
+        // Delete lessons from Cloudinary
+        for (const lesson of lessonsToDelete) {
+          try {
+            if (lesson.content_type === 'video') {
+              await deleteVideo(lesson.cloudinary_public_id);
+            } else {
+              await deleteDocument(lesson.cloudinary_public_id);
+            }
+          } catch (cloudinaryError) {
+            console.error('Error deleting lesson file from Cloudinary:', cloudinaryError);
+            // Continue with deletion even if Cloudinary cleanup fails
+          }
+        }
+        
         // Delete any quizzes associated with lessons
         await query(
           `DELETE FROM quizzes WHERE lesson_id IN (
@@ -166,7 +187,7 @@ const ModuleModel = {
           [moduleId]
         );
         
-        // Delete lessons
+        // Delete lessons from database
         await query(
           `DELETE FROM lessons WHERE module_id = $1`,
           [moduleId]

@@ -29,7 +29,8 @@ export const uploadProfileImage = async (imageFile) => {
     const response = await apiClient.post('/users/upload-image', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
-      }
+      },
+      timeout: 30000 // 30 seconds for image uploads
     });
     return response.data?.data || response.data;
   } catch (error) {

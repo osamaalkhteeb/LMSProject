@@ -29,6 +29,24 @@ const documentFileFilter = (req, file, cb) => {
   }
 };
 
+// File filter for lesson content (videos and PDFs)
+const lessonContentFilter = (req, file, cb) => {
+  const allowedTypes = [
+    'video/mp4',
+    'video/avi',
+    'video/mov',
+    'video/wmv',
+    'video/webm',
+    'application/pdf'
+  ];
+  
+  if (allowedTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only video files (mp4, avi, mov, wmv, webm) and PDF files are allowed!'), false);
+  }
+};
+
 // Configure multer for image uploads
 const uploadImage = multer({
   storage: storage,
@@ -47,6 +65,15 @@ const uploadDocument = multer({
   },
 });
 
-// Export both configurations
-export { uploadImage, uploadDocument };
+// Configure multer for lesson content uploads
+const uploadLessonContent = multer({
+  storage: storage,
+  fileFilter: lessonContentFilter,
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB max file size for videos and PDFs
+  },
+});
+
+// Export all configurations
+export { uploadImage, uploadDocument, uploadLessonContent };
 export default uploadImage; // Keep default export for backward compatibility

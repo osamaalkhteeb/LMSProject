@@ -60,14 +60,16 @@ const CourseDetailView = ({ course, onBack }) => {
   const [editingModule, setEditingModule] = useState(null);
 
   const [moduleForm, setModuleForm] = useState({ title: '', description: '' });
-  const [lessonForm, setLessonForm] = useState({ 
+  const [lessonForm, setLessonForm] = useState({
     title: '', 
     contentType: 'video', 
     contentUrl: '', 
     duration: 0,
-    orderNum: 1
+    orderNum: 1,
+    uploadType: 'url', // 'url' or 'file'
+    file: null
   });
-  const [quizForm, setQuizForm] = useState({ title: '', passingScore: 50, timeLimit: 10, maxAttempts: 1 });
+  const [quizForm, setQuizForm] = useState({ title: '', passing_score: 50, time_limit: 10, max_attempts: 1 });
   const [assignmentForm, setAssignmentForm] = useState({ title: '', description: '', deadline: '', points: 100 });
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   
@@ -243,12 +245,21 @@ const CourseDetailView = ({ course, onBack }) => {
   // Lesson CRUD handlers
   const handleCreateLesson = async () => {
     try {
-      // Validate contentUrl (required for all lesson types)
-      if (lessonForm.contentUrl) {
+      // Validate input based on upload type
+      if (lessonForm.uploadType === 'url') {
+        if (!lessonForm.contentUrl) {
+          setSnackbar({ open: true, message: 'Please enter a content URL', severity: 'error' });
+          return;
+        }
         try {
           new URL(lessonForm.contentUrl);
         } catch {
           setSnackbar({ open: true, message: 'Please enter a valid URL', severity: 'error' });
+          return;
+        }
+      } else if (lessonForm.uploadType === 'file') {
+        if (!lessonForm.file) {
+          setSnackbar({ open: true, message: 'Please select a file to upload', severity: 'error' });
           return;
         }
       }
@@ -256,11 +267,20 @@ const CourseDetailView = ({ course, onBack }) => {
       const moduleIndex = modules.findIndex(module => module.id === selectedModuleId);
       const orderNum = modules[moduleIndex].lessons.length + 1;
       
-      const newLesson = await createLesson(course.id, selectedModuleId, {
-        ...lessonForm,
-        duration: parseInt(lessonForm.duration) || 0,
-        orderNum
-      });
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('title', lessonForm.title);
+      formData.append('contentType', lessonForm.contentType);
+      formData.append('duration', parseInt(lessonForm.duration) || 0);
+      formData.append('orderNum', orderNum);
+      
+      if (lessonForm.uploadType === 'file' && lessonForm.file) {
+        formData.append('file', lessonForm.file);
+      } else {
+        formData.append('contentUrl', lessonForm.contentUrl);
+      }
+      
+      const newLesson = await createLesson(course.id, selectedModuleId, formData, true); // true indicates FormData
       
       const updatedModules = [...modules];
       updatedModules[moduleIndex].lessons.push(newLesson);
@@ -272,7 +292,9 @@ const CourseDetailView = ({ course, onBack }) => {
          contentType: 'video', 
          contentUrl: '', 
          duration: 0,
-         orderNum: 1
+         orderNum: 1,
+         uploadType: 'url',
+         file: null
        });
       setSnackbar({ open: true, message: 'Lesson created successfully', severity: 'success' });
     } catch (error) {
@@ -312,7 +334,7 @@ const CourseDetailView = ({ course, onBack }) => {
       const newLesson = await createLesson(course.id, selectedModuleId, {
         title: quizForm.title,
         contentType: 'quiz',
-        duration: quizForm.timeLimit,
+        duration: quizForm.time_limit,
         orderNum
       });
       
@@ -320,7 +342,7 @@ const CourseDetailView = ({ course, onBack }) => {
       await createQuiz(course.id, newLesson.id, quizForm);
       
       setOpenQuizDialog(false);
-      setQuizForm({ title: '', passingScore: 50, timeLimit: 10, maxAttempts: 1 });
+      setQuizForm({ title: '', passing_score: 50, time_limit: 10, max_attempts: 1 });
       setSnackbar({ open: true, message: 'Quiz created successfully', severity: 'success' });
       fetchCourseModules(); // Refresh to get updated data
     } catch (error) {
@@ -598,16 +620,58 @@ const CourseDetailView = ({ course, onBack }) => {
               <option value="text">Text</option>
             </TextField>
           <TextField
+            select
             margin="dense"
-            label="Content URL"
+            label="Upload Type"
             fullWidth
             variant="outlined"
-            value={lessonForm.contentUrl}
-            onChange={(e) => setLessonForm({ ...lessonForm, contentUrl: e.target.value })}
-            required
-            helperText="Enter a valid URL (e.g., https://example.com/video.mp4)"
+            value={lessonForm.uploadType}
+            onChange={(e) => setLessonForm({ ...lessonForm, uploadType: e.target.value, contentUrl: '', file: null })}
+            SelectProps={{ native: true }}
             sx={{ mb: 2 }}
-          />
+          >
+            <option value="url">{lessonForm.contentType === 'video' ? 'YouTube/Video URL' : 'Document URL'}</option>
+            <option value="file">{lessonForm.contentType === 'video' ? 'Upload Video File' : 'Upload PDF File'}</option>
+          </TextField>
+          
+          {lessonForm.uploadType === 'url' ? (
+            <TextField
+              margin="dense"
+              label={lessonForm.contentType === 'video' ? 'YouTube/Video URL' : 'Document URL'}
+              fullWidth
+              variant="outlined"
+              value={lessonForm.contentUrl}
+              onChange={(e) => setLessonForm({ ...lessonForm, contentUrl: e.target.value })}
+              required
+              helperText={lessonForm.contentType === 'video' ? 'Enter YouTube URL or direct video link' : 'Enter a valid document URL'}
+              sx={{ mb: 2 }}
+            />
+          ) : (
+            <Box sx={{ mb: 2 }}>
+              <input
+                accept={lessonForm.contentType === 'video' ? 'video/*' : 'application/pdf'}
+                style={{ display: 'none' }}
+                id="lesson-file-upload"
+                type="file"
+                onChange={(e) => setLessonForm({ ...lessonForm, file: e.target.files[0] })}
+              />
+              <label htmlFor="lesson-file-upload">
+                <Button
+                  variant="outlined"
+                  component="span"
+                  fullWidth
+                  sx={{ mb: 1, textTransform: 'none' }}
+                >
+                  {lessonForm.file ? lessonForm.file.name : `Choose ${lessonForm.contentType === 'video' ? 'Video' : 'PDF'} File`}
+                </Button>
+              </label>
+              {lessonForm.file && (
+                <Typography variant="caption" color="text.secondary">
+                  File size: {(lessonForm.file.size / (1024 * 1024)).toFixed(2)} MB
+                </Typography>
+              )}
+            </Box>
+          )}
           <TextField
             margin="dense"
             label="Duration (minutes)"
@@ -623,7 +687,7 @@ const CourseDetailView = ({ course, onBack }) => {
           <Button 
              onClick={handleCreateLesson} 
              variant="contained" 
-             disabled={!lessonForm.title || !lessonForm.contentUrl}
+             disabled={!lessonForm.title || (lessonForm.uploadType === 'url' && !lessonForm.contentUrl) || (lessonForm.uploadType === 'file' && !lessonForm.file)}
            >
             Create Lesson
           </Button>
@@ -652,8 +716,8 @@ const CourseDetailView = ({ course, onBack }) => {
             fullWidth
             variant="outlined"
             type="number"
-            value={quizForm.passingScore}
-            onChange={(e) => setQuizForm({ ...quizForm, passingScore: parseInt(e.target.value) })}
+            value={quizForm.passing_score}
+                        onChange={(e) => setQuizForm({ ...quizForm, passing_score: parseInt(e.target.value) })}
             sx={{ mb: 2 }}
           />
           <TextField
@@ -662,8 +726,8 @@ const CourseDetailView = ({ course, onBack }) => {
             fullWidth
             variant="outlined"
             type="number"
-            value={quizForm.timeLimit}
-            onChange={(e) => setQuizForm({ ...quizForm, timeLimit: parseInt(e.target.value) })}
+            value={quizForm.time_limit}
+                        onChange={(e) => setQuizForm({ ...quizForm, time_limit: parseInt(e.target.value) })}
             sx={{ mb: 2 }}
           />
           <TextField
@@ -672,8 +736,8 @@ const CourseDetailView = ({ course, onBack }) => {
             fullWidth
             variant="outlined"
             type="number"
-            value={quizForm.maxAttempts}
-            onChange={(e) => setQuizForm({ ...quizForm, maxAttempts: parseInt(e.target.value) })}
+            value={quizForm.max_attempts}
+                        onChange={(e) => setQuizForm({ ...quizForm, max_attempts: parseInt(e.target.value) })}
           />
         </DialogContent>
         <DialogActions>
