@@ -290,7 +290,6 @@ const CourseModel = {
   // Get pending courses (published but not approved - for admin)
   async getPendingCourses({ limit = 20, offset = 0 }) {
     return this.listCourses({
-      isPublished: true,
       isApproved: false,
       limit,
       offset,
@@ -337,14 +336,118 @@ const CourseModel = {
       const { rows } = await query(`
         SELECT 
           COUNT(*) as total_courses,
-          COUNT(CASE WHEN is_published = true THEN 1 END) as published_courses,
-          COUNT(CASE WHEN is_approved = true THEN 1 END) as approved_courses,
-          COUNT(CASE WHEN is_published = true AND is_approved = true THEN 1 END) as public_courses
+          COUNT(CASE WHEN is_published = true AND is_approved = true THEN 1 END) as published_courses,
+          COUNT(CASE WHEN is_approved = false THEN 1 END) as pending_courses,
+          COUNT(CASE WHEN is_published = false  THEN 1 END) as draft_courses
         FROM courses
       `);
       return rows[0];
     } catch (error) {
       console.error("Error fetching course stats:", error);
+      throw error;
+    }
+  },
+  // Get courses by category distribution
+  async getCoursesByCategory() {
+    try {
+      const { rows } = await query(`
+        SELECT 
+          COALESCE(cat.name, 'Uncategorized') as category_name,
+          COUNT(c.id) as course_count
+        FROM courses c
+        LEFT JOIN categories cat ON c.category_id = cat.id
+        WHERE c.is_published = true AND c.is_approved = true
+        GROUP BY cat.id, cat.name
+        ORDER BY course_count DESC
+      `);
+      
+      // Return the actual category data array
+      return rows;
+    } catch (error) {
+      console.error("Error fetching courses by category:", error);
+      throw error;
+    }
+  },
+
+  // Get top performing courses by enrollment count
+  async getTopPerformingCourses(limit = 10) {
+    try {
+      const { rows } = await query(`
+        SELECT 
+          c.id,
+          c.title,
+          COALESCE(cat.name, 'Uncategorized') as category_name,
+          COUNT(e.id) as enrollment_count,
+          COUNT(CASE WHEN e.completed_at IS NOT NULL THEN 1 END) as completion_count,
+          CASE 
+            WHEN COUNT(e.id) > 0 THEN 
+              ROUND((COUNT(CASE WHEN e.completed_at IS NOT NULL THEN 1 END)::DECIMAL / COUNT(e.id)) * 100, 2)
+            ELSE 0
+          END as completion_rate
+        FROM courses c
+        LEFT JOIN categories cat ON c.category_id = cat.id
+        LEFT JOIN enrollments e ON c.id = e.course_id
+        WHERE c.is_published = true AND c.is_approved = true
+        GROUP BY c.id, c.title, cat.name
+        ORDER BY enrollment_count DESC, completion_rate DESC
+        LIMIT $1
+      `, [limit]);
+      
+      return rows.map(row => ({
+        id: row.id,
+        title: row.title,
+        categoryName: row.category_name,
+        enrollmentCount: parseInt(row.enrollment_count, 10),
+        completionCount: parseInt(row.completion_count, 10),
+        completionRate: parseFloat(row.completion_rate)
+      }));
+    } catch (error) {
+      console.error("Error fetching top performing courses:", error);
+      throw error;
+    }
+  },
+
+  // Get course trend data for the last 6 months
+  async getCourseTrend() {
+    try {
+      const { rows } = await query(`
+        WITH months AS (
+          SELECT 
+            TO_CHAR(DATE_TRUNC('month', CURRENT_DATE - INTERVAL '5 months' + INTERVAL '1 month' * generate_series(0, 5)), 'Mon') as month_name,
+            DATE_TRUNC('month', CURRENT_DATE - INTERVAL '5 months' + INTERVAL '1 month' * generate_series(0, 5)) as month_date
+        ),
+        course_counts AS (
+          SELECT 
+            DATE_TRUNC('month', created_at) as month_date,
+            COUNT(*) as courses_created
+          FROM courses 
+          WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '5 months')
+          GROUP BY DATE_TRUNC('month', created_at)
+        ),
+        cumulative_counts AS (
+          SELECT 
+            m.month_name,
+            m.month_date,
+            COALESCE(cc.courses_created, 0) as courses_created,
+            (
+              SELECT COUNT(*) 
+              FROM courses 
+              WHERE created_at <= m.month_date + INTERVAL '1 month' - INTERVAL '1 second'
+            ) as total_courses
+          FROM months m
+          LEFT JOIN course_counts cc ON m.month_date = cc.month_date
+        )
+        SELECT 
+          array_agg(month_name ORDER BY month_date) as labels,
+          array_agg(total_courses ORDER BY month_date) as data
+        FROM cumulative_counts
+      `);
+      
+      return {
+        labels: rows[0]?.labels || [],
+        data: rows[0]?.data || []
+      };
+    } catch (error) {
       throw error;
     }
   },

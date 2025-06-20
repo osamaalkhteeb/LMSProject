@@ -87,7 +87,7 @@ const QuizResultsPage = () => {
     );
   }
 
-  console.log('Quiz results data:', results);
+
   const percentage = results.score || results.percentage || 0;
   const scoreColor = getScoreColor(percentage);
   const grade = getGradeFromPercentage(percentage);

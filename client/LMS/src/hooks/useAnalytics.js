@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
-import { getInstructorCourses, getCourseStats } from '../services/courseService.js';
+import React, { useState, useEffect, useCallback } from 'react';
+import { getInstructorCourses, getCourseStats, getCoursesByCategory, getTopPerformingCourses, getCourseTrend } from '../services/courseService.js';
 import { getEnrollmentsByCourse } from '../services/enrollmentService.js';
 import { getLessonsByCourse } from '../services/lessonService.js';
 import { getCompletedLessonsByCourse, getAllCompletedLessonsByCourse } from '../services/lessonCompletionService.js';
 import { getAssignmentSubmissions } from '../services/assignmentService.js';
-import { getUserStats } from '../services/userService.js';
+import { getUserStats, getUserTrend } from '../services/userService.js';
+import { getSystemStats, getHistoricalAnalytics } from '../services/systemService.js';
 
 // Hook for instructor analytics
 export const useInstructorAnalytics = () => {
@@ -340,18 +341,63 @@ export const useAdminAnalytics = () => {
       setLoading(true);
       setError(null);
       
-      // Fetch real data from backend
-      const [userStats, courseStats] = await Promise.all([
+      // Fetch real data from multiple backend endpoints
+      const [userStats, courseStats, systemStats, coursesByCategory, userTrendData, courseTrendData] = await Promise.all([
         getUserStats(),
-        getCourseStats()
+        getCourseStats(),
+        getSystemStats().catch(() => null), // Optional endpoint
+        getCoursesByCategory(),
+        getUserTrend().catch(() => null), // Real user trend data
+        getCourseTrend().catch(() => null) // Real course trend data
       ]);
+      
+      console.log('useAdminAnalytics - API responses:');
+      console.log('coursesByCategory from API:', coursesByCategory);
+      console.log('coursesByCategory type:', typeof coursesByCategory);
+      console.log('coursesByCategory isArray:', Array.isArray(coursesByCategory));
+      
+      
+      // Use real trend data from database
+      const userTrend = userTrendData || {
+        labels: [],
+        data: []
+      };
+      
+      // Use real course trend data from database
+      const courseTrend = courseTrendData || {
+        labels: [],
+        data: []
+      };
+      
+      // User role distribution from real data
+      const userRoleDistribution = {
+        labels: ['Students', 'Instructors', 'Admins'],
+        data: [userStats.students, userStats.instructors, userStats.admins]
+      };
+      
+      // Course status distribution from real data
+      const courseStatusDistribution = {
+        labels: ['Published', 'Pending', 'Drafts'],
+        data: [courseStats.publishedCourses, courseStats.pendingCourses, courseStats.draftCourses]
+      };
       
       const result = {
         totalUsers: userStats.totalUsers || 0,
         totalCourses: courseStats.totalCourses || 0,
+        totalEnrollments: systemStats?.stats?.totalEnrollments || 0, // Will be 0 if system endpoint fails
+        activeUsers: userStats.activeUsers || 0,
         totalRevenue: '$0', // Since the project is free, revenue is always 0
-        growthRate: userStats.growthRate || '+0%'
+        userTrend,
+        courseTrend,
+        userRoleDistribution,
+        courseStatusDistribution,
+        coursesByCategory: coursesByCategory || []
       };
+      
+      console.log('useAdminAnalytics - Final result object:');
+      console.log('result.coursesByCategory:', result.coursesByCategory);
+      console.log('result.coursesByCategory type:', typeof result.coursesByCategory);
+      console.log('result.coursesByCategory isArray:', Array.isArray(result.coursesByCategory));
       
       setAnalytics(result);
     } catch (err) {

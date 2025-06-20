@@ -12,12 +12,15 @@ export const validateRequest =
         ? req.query
         : req.body;
 
-    const { error } = schema.validate(dataToValidate, {
+    console.log(`[Validation] Source: ${source}, Original data:`, dataToValidate);
+    
+    const { error, value } = schema.validate(dataToValidate, {
       abortEarly: false,
       stripUnknown: true, // Remove unknown fields for security
     });
 
     if (error) {
+      console.log('[Validation] Validation errors:', error.details);
       const errors = error.details.map((detail) => ({
         field: detail.path.join("."),
         message: detail.message,
@@ -26,6 +29,22 @@ export const validateRequest =
         .status(HTTP_STATUS.BAD_REQUEST)
         .json(createResponse(false, "Validation failed", null, errors));
     }
+    
+    console.log(`[Validation] Transformed data:`, value);
+    
+    // Apply validated and transformed values back to request
+    if (source === "params") {
+      req.params = value;
+    } else if (source === "query") {
+      // req.query is read-only, so we need to update individual properties
+      Object.keys(value).forEach(key => {
+        req.query[key] = value[key];
+      });
+    } else {
+      req.body = value;
+    }
+    
+    console.log(`[Validation] Applied to req.${source}:`, value);
     next();
   };
 
@@ -78,11 +97,28 @@ export const schema = {
     password: Joi.string().min(6).required(),
   }),
 
+  createUser: Joi.object({
+    name: Joi.string().min(3).max(100).required(),
+    email: Joi.string().email().required(),
+    password: Joi.string().min(6).required(),
+    role: Joi.string().valid("student", "instructor", "admin", "STUDENT", "INSTRUCTOR", "ADMIN").default("student").custom((value, helpers) => {
+      return value.toLowerCase();
+    }),
+  }),
+
   //User profile schemas
   updateProfile: Joi.object({
     name: Joi.string().min(2).max(100).required(),
     bio: Joi.string().max(500).optional().allow(""),
     avatar_url: Joi.string().uri().optional().allow(""),
+  }),
+
+  updateUserByAdmin: Joi.object({
+    name: Joi.string().min(2).max(100).required(),
+    email: Joi.string().email().required(),
+    role: Joi.string().valid("student", "instructor", "admin", "STUDENT", "INSTRUCTOR", "ADMIN").required().custom((value, helpers) => {
+      return value.toLowerCase();
+    }),
   }),
 
   changePassword: Joi.object({

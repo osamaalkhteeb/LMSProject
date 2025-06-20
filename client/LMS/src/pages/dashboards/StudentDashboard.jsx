@@ -130,7 +130,6 @@ const StudentDashboard = () => {
   };
 
   const handleSubmitAssignment = () => {
-    console.log('Submitting assignment:', selectedAssignment, 'with file:', file);
     setOpenAssignmentDialog(false);
     setFile(null);
   };

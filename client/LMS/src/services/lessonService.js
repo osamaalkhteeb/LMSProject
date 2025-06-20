@@ -3,9 +3,9 @@ import apiClient from './apiClient.js';
 // Create lesson (Instructor/Admin only)
 export const createLesson = async (courseId, moduleId, lessonData) => {
   try {
-    console.log('Creating lesson with data:', { courseId, moduleId, lessonData });
+
     const response = await apiClient.post(`/lessons/courses/${courseId}/modules/${moduleId}/lessons`, lessonData);
-    console.log('Lesson creation response:', response.data);
+
     return response.data?.data || response.data;
   } catch (error) {
     console.error('Error creating lesson:', error);

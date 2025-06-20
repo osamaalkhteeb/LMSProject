@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import UserModel from "../models/user.model.js";
 import { createResponse } from "../utils/helper.js";
-import { HTTP_STATUS, USER_ROLES } from "../config/constants.js";
+import { HTTP_STATUS } from "../config/constants.js";
 import { uploadImage, deleteImage } from "../config/cloudinary.js";
 
 export const UserController = {
@@ -160,8 +160,8 @@ export const UserController = {
       const { role } = req.params;
 
       // Validate role
-      if (!Object.values(USER_ROLES).includes(role)) {
-        // we use the Object bc the USER_ROLES is an obj
+      const validRoles = ["admin", "instructor", "student"];
+      if (!validRoles.includes(role)) {
         return res
           .status(HTTP_STATUS.BAD_REQUEST)
           .json(createResponse(false, "Invalid role"));
@@ -357,6 +357,104 @@ export const UserController = {
       res
         .status(HTTP_STATUS.SERVER_ERROR)
         .json(createResponse(false, "Failed to upload profile image"));
+    }
+  },
+
+  // Create user by admin
+  async createUser(req, res) {
+    try {
+      const { name, email, password, role } = req.body;
+
+      // Check if user already exists
+      const existingUser = await UserModel.findUserByEmail(email);
+      if (existingUser) {
+        return res
+          .status(HTTP_STATUS.BAD_REQUEST)
+          .json(createResponse(false, "User already exists with this email"));
+      }
+
+      // Hash password
+      const bcrypt = await import("bcryptjs");
+      const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS) || 12;
+      const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+      // Create user
+      const newUser = await UserModel.createUser({
+        name: name.trim(),
+        email: email.toLowerCase().trim(),
+        hashedPassword,
+        role: role || "student",
+      });
+
+      if (!newUser) {
+        throw new Error("User creation failed");
+      }
+
+      res
+        .status(HTTP_STATUS.CREATED)
+        .json(createResponse(true, "User created successfully", newUser));
+    } catch (error) {
+      console.error("Create user error:", error);
+      res
+        .status(HTTP_STATUS.SERVER_ERROR)
+        .json(createResponse(false, "Failed to create user"));
+    }
+  },
+
+  // Update user by admin
+  async updateUserByAdmin(req, res) {
+    try {
+      const { id } = req.params;
+      const { name, email, role } = req.body;
+
+      // Check if user exists
+      const existingUser = await UserModel.findUserById(id);
+      if (!existingUser) {
+        return res
+          .status(HTTP_STATUS.NOT_FOUND)
+          .json(createResponse(false, "User not found"));
+      }
+
+      // Update user
+      const updatedUser = await UserModel.updateUserByAdmin(id, {
+        name: name.trim(),
+        email: email.toLowerCase().trim(),
+        role: role.toLowerCase()
+      });
+
+      if (!updatedUser) {
+        return res
+          .status(HTTP_STATUS.NOT_FOUND)
+          .json(createResponse(false, "User not found"));
+      }
+
+      res.json(createResponse(true, "User updated successfully", updatedUser));
+    } catch (error) {
+      console.error("Update user error:", error);
+      res
+        .status(HTTP_STATUS.SERVER_ERROR)
+        .json(createResponse(false, "Failed to update user"));
+    }
+  },
+
+  // Get user trend data (Admin only)
+  async getUserTrend(req, res) {
+    try {
+      if (req.user.role !== "admin") {
+        return res
+          .status(HTTP_STATUS.FORBIDDEN)
+          .json(createResponse(false, "Admin access required"));
+      }
+
+      const trendData = await UserModel.getUserTrend();
+      res.json(
+        createResponse(true, "User trend data retrieved successfully", trendData)
+      );
+    } catch (error) {
+      console.error("Get user trend error:", error);
+      res
+        .status(HTTP_STATUS.SERVER_ERROR)
+        .json(createResponse(false, "Failed to retrieve user trend data"));
     }
   },
 };
