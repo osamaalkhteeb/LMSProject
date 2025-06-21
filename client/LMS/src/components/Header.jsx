@@ -239,14 +239,14 @@ const Header = ({ mode, toggleDarkMode }) => {
           <p>Courses</p>
         </MenuItem>
       )}
-{user && (
-  <MenuItem onClick={handleProfileClick}>
-    <IconButton size="large" color="inherit">
-      <AccountCircleIcon />
-    </IconButton>
-    <p>Profile</p>
-  </MenuItem>
-)}
+      {user && (
+        <MenuItem onClick={handleProfileClick}>
+          <IconButton size="large" color="inherit">
+            <AccountCircleIcon />
+          </IconButton>
+          <p>Profile</p>
+        </MenuItem>
+      )}
 
       {user && (
         <MenuItem onClick={handleSettingsClick}>
@@ -271,7 +271,14 @@ const Header = ({ mode, toggleDarkMode }) => {
           <p>Register</p>
         </MenuItem>,
       ]}
-      
+      {user && (
+        <MenuItem onClick={handleLogout}>
+          <IconButton size="large" color="inherit">
+            <AccountCircleIcon />
+          </IconButton>
+          <p>Logout</p>
+        </MenuItem>
+      )}
     </Menu>
   );
 
