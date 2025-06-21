@@ -1,6 +1,5 @@
-
-import React from "react";
-import {
+import React, { useState } from 'react';
+import { 
   AppBar,
   Toolbar,
   Typography,
@@ -10,8 +9,8 @@ import {
   MenuItem,
   Box,
   Tooltip,
-  Button,
-} from "@mui/material";
+  Button
+} from '@mui/material';
 import {
   Menu as MenuIcon,
   Search as SearchIcon,
@@ -20,9 +19,8 @@ import {
   Settings as SettingsIcon,
   MenuBook as MenuBookIcon,
   Dashboard as DashboardIcon,
-
-  LightMode as LightModeIcon,
-  DarkMode as DarkModeIcon
+  Brightness4,
+  Brightness7
 } from '@mui/icons-material';
 import { styled, alpha } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
@@ -30,112 +28,95 @@ import { useAuth } from '../hooks/useAuth';
 import ThemeToggleButton from './ThemeToggleButton';
 import { useThemeContext } from '../contexts/ThemeContext.jsx';
 
-
 // Styled components
-const Search = styled("div")(({ theme }) => ({
-  position: "relative",
-  borderRadius: "12px",
-  backgroundColor:
-    theme.palette.mode === "dark"
-      ? alpha(theme.palette.common.white, 0.15)
-      : alpha(theme.palette.common.black, 0.05),
-  "&:hover": {
-    backgroundColor:
-      theme.palette.mode === "dark"
-        ? alpha(theme.palette.common.white, 0.25)
-        : alpha(theme.palette.common.black, 0.08),
+const Search = styled('div')(({ theme }) => ({
+  position: 'relative',
+  borderRadius: '12px',
+  backgroundColor: theme.palette.mode === 'dark' 
+    ? alpha(theme.palette.common.white, 0.15)
+    : alpha(theme.palette.common.black, 0.05),
+  '&:hover': {
+    backgroundColor: theme.palette.mode === 'dark'
+      ? alpha(theme.palette.common.white, 0.25)
+      : alpha(theme.palette.common.black, 0.08),
   },
-  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
   marginRight: theme.spacing(2),
   marginLeft: 0,
-  width: "100%",
-  [theme.breakpoints.up("sm")]: {
+  width: '100%',
+  [theme.breakpoints.up('sm')]: {
     marginLeft: theme.spacing(3),
-    width: "auto",
+    width: 'auto',
   },
 }));
 
-const SearchIconWrapper = styled("div")(({ theme }) => ({
+const SearchIconWrapper = styled('div')(({ theme }) => ({
   padding: theme.spacing(0, 2),
-  height: "100%",
-  position: "absolute",
-  pointerEvents: "none",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
+  height: '100%',
+  position: 'absolute',
+  pointerEvents: 'none',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
 }));
 
 const StyledInputBase = styled(InputBase)(({ theme }) => ({
-  color: "inherit",
-  "& .MuiInputBase-input": {
+  color: 'inherit',
+  '& .MuiInputBase-input': {
     padding: theme.spacing(1.5, 1, 1.5, 0),
     paddingLeft: `calc(1em + ${theme.spacing(4)})`,
-    transition: theme.transitions.create("width"),
-    width: "100%",
-    [theme.breakpoints.up("md")]: {
-      width: "24ch",
+    transition: theme.transitions.create('width'),
+    width: '100%',
+    [theme.breakpoints.up('md')]: {
+      width: '24ch',
     },
   },
-  "& .MuiInputBase-input:focus": {
-    width: "32ch",
+  '& .MuiInputBase-input:focus': {
+    width: '32ch',
   },
 }));
 
 const HeaderButton = styled(Button)(({ theme }) => ({
-  textTransform: "none",
-  borderRadius: "12px",
-  padding: "8px 16px",
-  margin: "0 4px",
+  textTransform: 'none',
+  borderRadius: '12px',
+  padding: '8px 16px',
+  margin: '0 4px',
   fontWeight: 500,
-  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-  color:
-    theme.palette.mode === "dark"
-      ? theme.palette.text.primary
-      : theme.palette.primary.contrastText,
-  backgroundColor:
-    theme.palette.mode === "dark" ? "transparent" : theme.palette.primary.main,
-  "&:hover": {
-    backgroundColor:
-      theme.palette.mode === "dark"
-        ? alpha(theme.palette.text.primary, 0.08)
-        : theme.palette.primary.dark,
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  color: theme.palette.mode === 'dark' ? theme.palette.text.primary : theme.palette.primary.contrastText,
+  backgroundColor: theme.palette.mode === 'dark' ? 'transparent' : theme.palette.primary.main,
+  '&:hover': {
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : theme.palette.primary.dark,
   },
-  "&:focus": {
-    outline: "none",
-    boxShadow: "none",
+  '&:focus': {
+    outline: 'none',
+    boxShadow: 'none',
   },
 }));
 
 const HeaderIconButton = styled(IconButton)(({ theme }) => ({
-  borderRadius: "12px",
-  padding: "8px",
-  margin: "0 4px",
-  color:
-    theme.palette.mode === "dark"
-      ? theme.palette.text.primary
-      : theme.palette.primary.contrastText,
-  backgroundColor:
-    theme.palette.mode === "dark" ? "transparent" : theme.palette.primary.main,
-  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-  "&:hover": {
-    backgroundColor:
-      theme.palette.mode === "dark"
-        ? alpha(theme.palette.text.primary, 0.08)
-        : theme.palette.primary.dark,
-    transform: "scale(1.05)",
+  borderRadius: '12px',
+  padding: '8px',
+  margin: '0 4px',
+  color: theme.palette.mode === 'dark' ? theme.palette.text.primary : theme.palette.primary.contrastText,
+  backgroundColor: theme.palette.mode === 'dark' ? 'transparent' : theme.palette.primary.main,
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  '&:hover': {
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : theme.palette.primary.dark,
+    transform: 'scale(1.05)',
   },
-  "&:focus": {
-    outline: "none",
-    boxShadow: "none",
+  '&:focus': {
+    outline: 'none',
+    boxShadow: 'none',
   },
 }));
 
 const Header = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { mode, toggleDarkMode } = useThemeContext();
-  const [anchorEl, setAnchorEl] = React.useState(null);
-  const [mobileMoreAnchorEl, setMobileMoreAnchorEl] = React.useState(null);
+  const { mode, toggleMode } = useThemeContext();
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [mobileMoreAnchorEl, setMobileMoreAnchorEl] = useState(null);
 
   const isMenuOpen = Boolean(anchorEl);
   const isMobileMenuOpen = Boolean(mobileMoreAnchorEl);
@@ -158,17 +139,17 @@ const Header = () => {
   };
 
   const handleCoursesClick = () => {
-    navigate("/courses");
+    navigate('/courses');
     handleMobileMenuClose();
   };
 
   const handleLoginClick = () => {
-    navigate("/login");
+    navigate('/login');
     handleMobileMenuClose();
   };
 
   const handleRegisterClick = () => {
-    navigate("/signup");
+    navigate('/signup');
     handleMobileMenuClose();
   };
 
@@ -180,12 +161,12 @@ const Header = () => {
   };
 
   const handleProfileClick = () => {
-    navigate("/MyProfile");
+    navigate('/MyProfile');
     handleMenuClose();
   };
 
   const handleSettingsClick = () => {
-    navigate("/SettingsPage");
+    navigate('/SettingsPage');
     handleMenuClose();
   };
 
@@ -194,14 +175,14 @@ const Header = () => {
     handleMenuClose();
   };
 
-  const menuId = "primary-search-account-menu";
+  const menuId = 'primary-search-account-menu';
   const renderMenu = (
     <Menu
       anchorEl={anchorEl}
-      anchorOrigin={{ vertical: "top", horizontal: "right" }}
+      anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       id={menuId}
       keepMounted
-      transformOrigin={{ vertical: "top", horizontal: "right" }}
+      transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       open={isMenuOpen}
       onClose={handleMenuClose}
     >
@@ -210,22 +191,22 @@ const Header = () => {
     </Menu>
   );
 
-  const mobileMenuId = "primary-search-account-menu-mobile";
+  const mobileMenuId = 'primary-search-account-menu-mobile';
   const renderMobileMenu = (
     <Menu
       anchorEl={mobileMoreAnchorEl}
-      anchorOrigin={{ vertical: "top", horizontal: "right" }}
+      anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       id={mobileMenuId}
       keepMounted
-      transformOrigin={{ vertical: "top", horizontal: "right" }}
+      transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       open={isMobileMenuOpen}
       onClose={handleMobileMenuClose}
     >
-      <MenuItem onClick={toggleDarkMode}>
+      <MenuItem onClick={toggleMode}>
         <IconButton size="large" color="inherit">
-          {mode === "dark" ? <LightModeIcon /> : <DarkModeIcon />}
+          {mode === 'dark' ? <Brightness7 /> : <Brightness4 />}
         </IconButton>
-        <p>{mode === "light" ? "Dark" : "Light"} Mode</p>
+        <p>{mode === 'light' ? 'Dark' : 'Light'} Mode</p>
       </MenuItem>
 
       {user && (
@@ -237,7 +218,7 @@ const Header = () => {
         </MenuItem>
       )}
 
-      {(!user || user?.role === "student") && (
+      {(!user || user?.role === 'student') && (
         <MenuItem onClick={handleCoursesClick}>
           <IconButton size="large" color="inherit">
             <MenuBookIcon />
@@ -245,6 +226,7 @@ const Header = () => {
           <p>Courses</p>
         </MenuItem>
       )}
+
       {user && (
         <MenuItem onClick={handleProfileClick}>
           <IconButton size="large" color="inherit">
@@ -263,6 +245,15 @@ const Header = () => {
         </MenuItem>
       )}
 
+      {user && (
+        <MenuItem onClick={handleLogout}>
+          <IconButton size="large" color="inherit">
+            <AccountCircleIcon />
+          </IconButton>
+          <p>Logout</p>
+        </MenuItem>
+      )}
+
       {!user && [
         <MenuItem key="login" onClick={handleLoginClick}>
           <IconButton size="large" color="inherit">
@@ -275,16 +266,8 @@ const Header = () => {
             <AccountCircleIcon />
           </IconButton>
           <p>Register</p>
-        </MenuItem>,
-      ]}
-      {user && (
-        <MenuItem onClick={handleLogout}>
-          <IconButton size="large" color="inherit">
-            <AccountCircleIcon />
-          </IconButton>
-          <p>Logout</p>
         </MenuItem>
-      )}
+      ]}
     </Menu>
   );
 
@@ -294,53 +277,37 @@ const Header = () => {
         position="fixed"
         sx={{
           zIndex: (theme) => theme.zIndex.drawer + 1,
-          backgroundColor: (theme) =>
-            theme.palette.mode === "dark"
-              ? theme.palette.background.paper
-              : theme.palette.primary.main,
-          boxShadow: "0px 2px 4px -1px rgba(0,0,0,0.1)",
-          borderBottom: (theme) =>
-            `1px solid ${
-              theme.palette.mode === "dark"
-                ? "rgba(255, 255, 255, 0.12)"
-                : "rgba(0, 0, 0, 0.08)"
-            }`,
-          color: (theme) =>
-            theme.palette.mode === "dark"
-              ? theme.palette.text.primary
-              : theme.palette.primary.contrastText,
+          backgroundColor: (theme) => 
+            theme.palette.mode === 'dark' ? theme.palette.background.paper : theme.palette.primary.main,
+          boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.1)',
+          borderBottom: (theme) => 
+            `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)'}`,
+          color: (theme) => 
+            theme.palette.mode === 'dark' ? theme.palette.text.primary : theme.palette.primary.contrastText
         }}
       >
         <Toolbar>
-          <Box
-            sx={{
-              maxWidth: "1520px",
-              width: "100%",
-              margin: "0 auto",
-              display: "flex",
-              alignItems: "center",
-              padding: "0 16px",
-            }}
-          >
-            {/* Logo */}
+          <Box sx={{
+            maxWidth: '1520px',
+            width: '100%',
+            margin: '0 auto',
+            display: 'flex',
+            alignItems: 'center',
+            padding: '0 16px'
+          }}>
             {/* Logo */}
             <Box
               sx={{
-                display: { xs: "none", md: "flex" }, // اللوغو يختفي على الموبايل
-                alignItems: "center",
+                display: { xs: 'none', md: 'flex' },
+                alignItems: 'center',
                 mr: 2,
-                cursor: "pointer",
-                "&:hover": { opacity: 0.8 },
+                cursor: 'pointer',
+                '&:hover': { opacity: 0.8 }
               }}
-              onClick={() => (user ? handleDashboardClick() : navigate("/"))}
+              onClick={() => user ? handleDashboardClick() : navigate('/')}
             >
               <SchoolIcon sx={{ mr: 1, fontSize: 28 }} />
-              <Typography
-                variant="h6"
-                noWrap
-                component="div"
-                sx={{ fontWeight: "bold" }}
-              >
+              <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold' }}>
                 EduGo
               </Typography>
             </Box>
@@ -351,7 +318,7 @@ const Header = () => {
               edge="start"
               color="inherit"
               aria-label="open drawer"
-              sx={{ mr: 2, display: { xs: "flex", md: "none" } }}
+              sx={{ mr: 2, display: { xs: 'flex', md: 'none' } }}
               onClick={handleMobileMenuOpen}
               disableRipple
             >
@@ -369,30 +336,15 @@ const Header = () => {
               </SearchIconWrapper>
               <StyledInputBase
                 placeholder="Search…"
-                inputProps={{ "aria-label": "search" }}
+                inputProps={{ 'aria-label': 'search' }}
               />
             </Search>
 
             <Box sx={{ flexGrow: 1 }} />
 
             {/* Desktop Icons */}
-
-            <Box
-              sx={{ display: { xs: "none", md: "flex" }, alignItems: "center" }}
-            >
-              <Tooltip
-                title={`Switch to ${mode === "light" ? "dark" : "light"} mode`}
-              >
-                <HeaderIconButton
-                  size="large"
-                  color="inherit"
-                  onClick={toggleDarkMode}
-                  disableRipple
-                >
-                  {mode === "dark" ? <LightModeIcon /> : <DarkModeIcon />}
-                </HeaderIconButton>
-              </Tooltip>
-
+            <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
+              <ThemeToggleButton size="large" />
 
               {user && (
                 <Tooltip title="Dashboard">
@@ -405,7 +357,7 @@ const Header = () => {
                 </Tooltip>
               )}
 
-              {(!user || user?.role === "student") && (
+              {(!user || user?.role === 'student') && (
                 <Tooltip title="Courses">
                   <HeaderButton
                     onClick={handleCoursesClick}
@@ -446,25 +398,27 @@ const Header = () => {
 
               {!user && (
                 <>
-                  <HeaderButton onClick={handleLoginClick}>Login</HeaderButton>
+                  <HeaderButton onClick={handleLoginClick}>
+                    Login
+                  </HeaderButton>
                   <HeaderButton
                     variant="outlined"
                     onClick={handleRegisterClick}
                     sx={{
-                      borderColor: (theme) =>
-                        theme.palette.mode === "dark"
-                          ? "rgba(255, 255, 255, 0.23)"
-                          : "rgba(255, 255, 255, 0.7)",
-                      "&:hover": {
-                        borderColor: (theme) =>
-                          theme.palette.mode === "dark"
-                            ? "rgba(255, 255, 255, 0.3)"
-                            : "rgba(255, 255, 255, 0.9)",
-                        backgroundColor: (theme) =>
-                          theme.palette.mode === "dark"
-                            ? "rgba(255, 255, 255, 0.08)"
-                            : "rgba(255, 255, 255, 0.04)",
-                      },
+                      borderColor: (theme) => 
+                        theme.palette.mode === 'dark' 
+                          ? 'rgba(255, 255, 255, 0.23)' 
+                          : 'rgba(255, 255, 255, 0.7)',
+                      '&:hover': {
+                        borderColor: (theme) => 
+                          theme.palette.mode === 'dark' 
+                            ? 'rgba(255, 255, 255, 0.3)' 
+                            : 'rgba(255, 255, 255, 0.9)',
+                        backgroundColor: (theme) => 
+                          theme.palette.mode === 'dark' 
+                            ? 'rgba(255, 255, 255, 0.08)' 
+                            : 'rgba(255, 255, 255, 0.04)',
+                      }
                     }}
                   >
                     Register
