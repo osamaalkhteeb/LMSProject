@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Box,
@@ -66,9 +65,18 @@ const AnalyticsTab = () => {
       </Alert>
     );
   }
-  
 
- 
+  // Color palette based on #4169E1 (Royal Blue)
+  const colorPalette = {
+    primary: '#4169E1',        // Base color
+    light1: '#6B8CEB',         // Lighter shade
+    light2: '#95AFF5',         // Even lighter
+    dark1: '#2A4AB7',          // Darker shade
+    dark2: '#1A2F8D',          // Even darker
+    accent1: '#41A2E1',        // Blue with more cyan
+    accent2: '#4149E1',        // More purple
+    accent3: '#6941E1'         // Purple shade
+  };
 
   const StatCard = ({ title, value, icon: Icon, color }) => (
     <Card sx={{ height: '100%' }}>
@@ -88,15 +96,15 @@ const AnalyticsTab = () => {
     </Card>
   );
 
-  // Chart configurations
+  // Chart configurations with new color scheme
   const userTrendChartData = {
     labels: analytics?.userTrend?.labels || [],
     datasets: [
       {
         label: 'User Registrations',
         data: analytics?.userTrend?.data || [],
-        borderColor: '#2196f3',
-        backgroundColor: 'rgba(33, 150, 243, 0.1)',
+        borderColor: colorPalette.primary,
+        backgroundColor: 'rgba(65, 105, 225, 0.1)',
         tension: 0.4,
         fill: true
       }
@@ -109,8 +117,8 @@ const AnalyticsTab = () => {
       {
         label: 'Course Creation',
         data: analytics?.courseTrend?.data || [],
-        borderColor: '#ff9800',
-        backgroundColor: 'rgba(255, 152, 0, 0.1)',
+        borderColor: colorPalette.dark1,
+        backgroundColor: 'rgba(42, 74, 183, 0.1)',
         tension: 0.4,
         fill: true
       }
@@ -123,9 +131,9 @@ const AnalyticsTab = () => {
       {
         data: analytics?.userRoleDistribution?.data || [],
         backgroundColor: [
-          '#4caf50',
-          '#2196f3',
-          '#ff9800'
+          colorPalette.primary,
+          colorPalette.light1,
+          colorPalette.dark1
         ],
         borderWidth: 2,
         borderColor: '#fff'
@@ -139,9 +147,9 @@ const AnalyticsTab = () => {
       {
         data: analytics?.courseStatusDistribution?.data || [],
         backgroundColor: [
-          '#4caf50',
-          '#ff9800',
-          '#f44336'
+          colorPalette.primary,
+          colorPalette.light1,
+          colorPalette.dark1
         ],
         borderWidth: 2,
         borderColor: '#fff'
@@ -149,9 +157,6 @@ const AnalyticsTab = () => {
     ]
   };
 
-  // Courses by Category Chart Data
-
-  
   const coursesByCategoryChartData = {
     labels: (Array.isArray(analytics.coursesByCategory) ? analytics.coursesByCategory : []).map(item => {
       if (!item.category_name || item.category_name === 'null' || item.category_name === null) {
@@ -163,22 +168,20 @@ const AnalyticsTab = () => {
       {
         data: (Array.isArray(analytics.coursesByCategory) ? analytics.coursesByCategory : []).map(item => item.course_count),
         backgroundColor: [
-          '#2196f3',
-          '#4caf50',
-          '#ff9800',
-          '#9c27b0',
-          '#f44336',
-          '#00bcd4',
-          '#795548',
-          '#607d8b'
+          colorPalette.primary,
+          colorPalette.light1,
+          colorPalette.dark1,
+          colorPalette.accent1,
+          colorPalette.accent2,
+          colorPalette.light2,
+          colorPalette.dark2,
+          colorPalette.accent3
         ],
         borderWidth: 2,
         borderColor: '#fff'
       }
     ]
   };
-
-
 
   const chartOptions = {
     responsive: true,
@@ -205,50 +208,6 @@ const AnalyticsTab = () => {
     }
   };
 
-  const dualAxisOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    interaction: {
-      mode: 'index',
-      intersect: false,
-    },
-    scales: {
-      x: {
-        display: true,
-        title: {
-          display: true,
-          text: 'Courses'
-        }
-      },
-      y: {
-        type: 'linear',
-        display: true,
-        position: 'left',
-        title: {
-          display: true,
-          text: 'Enrollments'
-        }
-      },
-      y1: {
-        type: 'linear',
-        display: true,
-        position: 'right',
-        title: {
-          display: true,
-          text: 'Completion Rate (%)'
-        },
-        grid: {
-          drawOnChartArea: false,
-        },
-      },
-    },
-    plugins: {
-      legend: {
-        position: 'top'
-      }
-    }
-  };
-
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
@@ -257,20 +216,13 @@ const AnalyticsTab = () => {
       
       {/* Key Metrics Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={2}>
-          <StatCard
-            title="Total Users"
-            value={analytics.totalUsers}
-            icon={FiUsers}
-            color="#2196f3"
-          />
-        </Grid>
+        
         <Grid item xs={12} sm={6} md={2}>
           <StatCard
             title="Active Users"
             value={analytics.activeUsers}
             icon={FiUserCheck}
-            color="#4caf50"
+            color={colorPalette.accent1}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={2}>
@@ -278,7 +230,7 @@ const AnalyticsTab = () => {
             title="Total Courses"
             value={analytics.totalCourses}
             icon={FiBookOpen}
-            color="#ff9800"
+            color={colorPalette.dark1}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={2}>
@@ -286,11 +238,9 @@ const AnalyticsTab = () => {
             title="Enrollments"
             value={analytics.totalEnrollments}
             icon={FiTarget}
-            color="#9c27b0"
+            color={colorPalette.accent3}
           />
         </Grid>
-
-
       </Grid>
 
       {/* Charts Section */}
@@ -354,8 +304,6 @@ const AnalyticsTab = () => {
             </Box>
           </Paper>
         </Grid>
-
-
       </Grid>
     </Box>
   );
