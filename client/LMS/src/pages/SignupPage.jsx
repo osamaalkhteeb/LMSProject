@@ -10,10 +10,10 @@ import {
   Link,
   Paper,
   Alert,
-  CircularProgress,
   IconButton
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { ClockLoader } from 'react-spinners';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useFormHandler } from '../hooks/useFormHandler';
@@ -286,7 +286,7 @@ const SignupPage = () => {
                 }}
               >
                 {(loading || isSubmitting) ? (
-                  <CircularProgress size={24} color="inherit" />
+                  <ClockLoader size={20} color="#ffffff" />
                 ) : (
                   'Sign Up'
                 )}

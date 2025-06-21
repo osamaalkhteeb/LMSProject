@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { ClockLoader } from 'react-spinners';
 import {
   Container,
   Paper,
@@ -15,7 +16,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  CircularProgress,
   Grid,
   IconButton,
   Chip
@@ -161,7 +161,7 @@ const QuizTakingPage = () => {
     return (
       <Container maxWidth="md" sx={{ py: 4 }}>
         <Box display="flex" justifyContent="center" alignItems="center" minHeight={400}>
-          <CircularProgress />
+          <ClockLoader size={50} color="#1976d2" />
         </Box>
       </Container>
     );
@@ -507,7 +507,7 @@ const QuizTakingPage = () => {
             color="primary"
             disabled={isSubmitting}
           >
-            {isSubmitting ? <CircularProgress size={20} /> : 'Submit'}
+            {isSubmitting ? <ClockLoader size={20} color="#1976d2" /> : 'Submit'}
           </Button>
         </DialogActions>
       </Dialog>

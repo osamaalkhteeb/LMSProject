@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { Box, Grid, Paper, Tabs, Tab, Container, CircularProgress, Typography } from "@mui/material";
+import { Box, Grid, Paper, Tabs, Tab, Container, Typography } from "@mui/material";
+import { ClockLoader } from "react-spinners";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import StudentProfile from "../../components/student/StudentProfile";
 import StatCard from "../../components/student/StatCard";
@@ -12,6 +13,7 @@ import QuizzesTab from "../../components/student/QuizzesTab";
 import AssignmentDialog from "../../components/student/AssignmentsDialog";
 import { CheckCircle, School, EmojiEvents, LocalFireDepartment } from '@mui/icons-material';
 import { Description as FileText } from '@mui/icons-material';
+import { validateFileUpload } from '../../utils/constants';
 
 // Import hooks
 import { useAuthContext } from "../../hooks/useAuth";
@@ -26,6 +28,7 @@ const StudentDashboard = () => {
   const [openAssignmentDialog, setOpenAssignmentDialog] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [file, setFile] = useState(null);
+  const [fileError, setFileError] = useState(null);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [currentVideo, setCurrentVideo] = useState(null);
   const [currentLesson, setCurrentLesson] = useState(null);
@@ -44,7 +47,6 @@ const StudentDashboard = () => {
   const studentStats = {
     enrolledCourses: enrollments?.length || 0,
     completedCourses: enrollments?.filter(enrollment => enrollment.progress === 100)?.length || 0,
-    certificatesEarned: enrollments?.filter(enrollment => enrollment.certificate_earned)?.length || 0,
     studyStreak: enrollments?.filter(enrollment => enrollment.progress > 0)?.length || 0,
   };
 
@@ -149,6 +151,18 @@ const StudentDashboard = () => {
 
   const handleFileUpload = (event) => {
     const uploadedFile = event.target.files[0];
+    setFileError(null); // Clear previous errors
+    
+    if (uploadedFile) {
+      // Validate file for document uploads (assignments are documents)
+      const validation = validateFileUpload(uploadedFile, 'document');
+      if (!validation.isValid) {
+        setFileError(validation.error);
+        setFile(null);
+        return;
+      }
+    }
+    
     setFile(uploadedFile);
   };
 
@@ -186,7 +200,7 @@ const StudentDashboard = () => {
       return (
         <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
           <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-            <CircularProgress />
+            <ClockLoader size={50} color="#1976d2" />
             <Typography sx={{ ml: 2 }}>Loading course content...</Typography>
           </Box>
         </Container>
@@ -287,6 +301,7 @@ const StudentDashboard = () => {
         onClose={() => setOpenAssignmentDialog(false)}
         assignment={selectedAssignment}
         file={file}
+        fileError={fileError}
         onFileUpload={handleFileUpload}
         onSubmit={handleSubmitAssignment}
       />
