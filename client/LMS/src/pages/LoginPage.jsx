@@ -11,11 +11,11 @@ import {
   Link,
   Paper,
   Alert,
-  CircularProgress,
   IconButton
 } from "@mui/material";
 import GoogleIcon from "@mui/icons-material/Google";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import { ClockLoader } from "react-spinners";
 import { useAuth } from "../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { useFormHandler } from "../hooks/useFormHandler";
@@ -198,7 +198,7 @@ const LoginPage = () => {
                 onClick={handleGoogleLogin}
                 disabled={loading}
               >
-                {loading ? <CircularProgress size={24} /> : 'Sign in with Google'}
+                {loading ? <ClockLoader size={20} color="#1976d2" /> : 'Sign in with Google'}
               </Button>
 
               <Divider sx={{ my: 3 }}>
@@ -276,7 +276,7 @@ const LoginPage = () => {
                 }}
                 disabled={loading || isSubmitting}
               >
-                {(loading || isSubmitting) ? <CircularProgress size={24} color="inherit" /> : 'Login'}
+                {(loading || isSubmitting) ? <ClockLoader size={20} color="#ffffff" /> : 'Login'}
               </Button>
 
               <Typography 

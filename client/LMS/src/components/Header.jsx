@@ -1,3 +1,4 @@
+
 import React from "react";
 import {
   AppBar,
@@ -19,12 +20,16 @@ import {
   Settings as SettingsIcon,
   MenuBook as MenuBookIcon,
   Dashboard as DashboardIcon,
-  Brightness4 as DarkModeIcon,
-  Brightness7 as LightModeIcon,
-} from "@mui/icons-material";
-import { styled, alpha } from "@mui/material/styles";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth";
+
+  LightMode as LightModeIcon,
+  DarkMode as DarkModeIcon
+} from '@mui/icons-material';
+import { styled, alpha } from '@mui/material/styles';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+import ThemeToggleButton from './ThemeToggleButton';
+import { useThemeContext } from '../contexts/ThemeContext.jsx';
+
 
 // Styled components
 const Search = styled("div")(({ theme }) => ({
@@ -125,11 +130,12 @@ const HeaderIconButton = styled(IconButton)(({ theme }) => ({
   },
 }));
 
-const Header = ({ mode, toggleDarkMode }) => {
+const Header = () => {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const { mode, toggleDarkMode } = useThemeContext();
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [mobileMoreAnchorEl, setMobileMoreAnchorEl] = React.useState(null);
-  const { user, logout } = useAuth();
 
   const isMenuOpen = Boolean(anchorEl);
   const isMobileMenuOpen = Boolean(mobileMoreAnchorEl);
@@ -370,6 +376,7 @@ const Header = ({ mode, toggleDarkMode }) => {
             <Box sx={{ flexGrow: 1 }} />
 
             {/* Desktop Icons */}
+
             <Box
               sx={{ display: { xs: "none", md: "flex" }, alignItems: "center" }}
             >
@@ -385,6 +392,7 @@ const Header = ({ mode, toggleDarkMode }) => {
                   {mode === "dark" ? <LightModeIcon /> : <DarkModeIcon />}
                 </HeaderIconButton>
               </Tooltip>
+
 
               {user && (
                 <Tooltip title="Dashboard">

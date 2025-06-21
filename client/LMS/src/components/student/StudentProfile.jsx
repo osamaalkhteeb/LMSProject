@@ -47,14 +47,7 @@ const StudentProfile = ({ student }) => {
             color="success"
           />
         </Grid>
-        <Grid item xs={6} sm={6} md={3}>
-          <StatCard
-            title="Certificates"
-            value={student.certificatesEarned}
-            icon={FileText}
-            color="warning"
-          />
-        </Grid>
+
         <Grid item xs={6} sm={6} md={3}>
           <StatCard
             title="Study Streak"

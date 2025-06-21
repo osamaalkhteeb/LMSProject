@@ -1,50 +1,136 @@
-import { createResponse} from "../utils/helper.js";
-import { HTTP_STATUS } from "../config/constants.js";
+import { createResponse } from "../utils/helper.js";
+import { HTTP_STATUS, SUPPORTED_FILE_TYPES } from "../config/constants.js";
 import LessonModel from "../models/lesson.model.js";
 import { uploadVideo, uploadDocument, deleteVideo, deleteDocument } from "../config/cloudinary.js";
 
+
 export const LessonController = {
   async create(req, res) {
+    
     try {
-      let contentUrl = req.body.contentUrl;
-      let cloudinaryPublicId = null;
+      const { courseId, moduleId } = req.params;
       
+      console.log('=== LESSON CONTROLLER CREATE DEBUG ===');
+      console.log('Course ID:', courseId);
+      console.log('Module ID:', moduleId);
+      console.log('Request body:', req.body);
+      console.log('File info:', req.file);
+
+      const { title, description, content, contentType, orderNum, duration } = req.body;
+      console.log('Extracted data:', { title, description, content, contentType, orderNum, duration });
+      
+      // Map frontend field names to backend field names
+      const type = contentType;
+      const order_index = orderNum ? parseInt(orderNum) : null;
+      console.log('Mapped fields:', { type, order_index });
+
+      const file = req.file;
+      let fileUrl = null;
+      let publicId = null;
+
       // Handle file upload if present
-      if (req.file) {
-        const isVideo = req.file.mimetype.startsWith('video/');
-        const isPdf = req.file.mimetype === 'application/pdf';
+      if (file) {
+        // Check file size limit using constants
+        const fileTypeConfig = type === 'video' ? SUPPORTED_FILE_TYPES.VIDEO : SUPPORTED_FILE_TYPES.DOCUMENT;
         
-        if (isVideo) {
-          // Convert buffer to base64 for Cloudinary upload
-          const base64Video = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-          const uploadResult = await uploadVideo(base64Video);
-          contentUrl = uploadResult.secure_url;
-          cloudinaryPublicId = uploadResult.public_id;
-        } else if (isPdf) {
-          // Upload PDF to Cloudinary
-          const base64Pdf = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-          const uploadResult = await uploadDocument(base64Pdf, {
-            folder: 'lms_lessons/pdfs'
-          });
-          contentUrl = uploadResult.secure_url;
-          cloudinaryPublicId = uploadResult.public_id;
+        if (file.size > fileTypeConfig.maxSize) {
+          return res.status(HTTP_STATUS.BAD_REQUEST).json(
+            createResponse(false, `File size exceeds the limit`, null, {
+              code: 'FILE_TOO_LARGE',
+              details: `Please compress your file or choose a smaller file. ${fileTypeConfig.description}`,
+              fileSize: file.size,
+              maxSize: fileTypeConfig.maxSize,
+              supportedTypes: fileTypeConfig.description
+            })
+          );
+        }
+        
+        try {
+          let uploadResult;
+          
+          if (type === 'video') {
+            uploadResult = await uploadVideo(file.buffer, file.originalname, {
+              quality: 'auto:low', // Lower quality for free tier
+              format: 'mp4',
+              chunk_size: 6000000,
+              timeout: 120000
+              // Removed eager transformations for free tier compatibility
+            });
+          } else {
+            uploadResult = await uploadDocument(file.buffer, file.originalname, {
+              chunk_size: 6000000,
+              timeout: 60000
+            });
+          }
+          
+          fileUrl = uploadResult.secure_url;
+          publicId = uploadResult.public_id;
+          
+        } catch (uploadError) {
+          console.error('❌ Cloudinary upload error:', uploadError);
+          
+          // Handle specific Cloudinary errors and pass them to client
+          if (uploadError.message?.includes('Requested resource too large') || uploadError.message?.includes('File size too large')) {
+            const fileTypeConfig = type === 'video' ? SUPPORTED_FILE_TYPES.VIDEO : SUPPORTED_FILE_TYPES.DOCUMENT;
+            return res.status(HTTP_STATUS.BAD_REQUEST).json(
+                createResponse(false, `File size exceeds the limit`, null, {
+                code: 'FILE_TOO_LARGE',
+                details: `Please compress your file or choose a smaller file. ${fileTypeConfig.description}`,
+                cloudinaryError: uploadError.message,
+                supportedTypes: fileTypeConfig.description
+              })
+            );
+          }
+          
+          // Pass Cloudinary error details to client
+          if (uploadError.http_code >= 400) {
+            return res.status(HTTP_STATUS.BAD_REQUEST).json(
+              createResponse(false, 'Cloudinary upload failed', null, {
+                code: 'CLOUDINARY_ERROR',
+                details: uploadError.message || 'Upload service error',
+                cloudinaryError: uploadError.message,
+                httpCode: uploadError.http_code
+              })
+            );
+          }
+          
+          // For any other Cloudinary errors, pass the full error message
+          return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+            createResponse(false, 'Upload failed', null, {
+              code: 'UPLOAD_ERROR',
+              details: uploadError.message || 'Unknown upload error',
+              cloudinaryError: uploadError.message
+            })
+          );
         }
       }
+
+      // Create lesson in database - map to model's expected parameters
+      const lessonData = {
+        moduleId: parseInt(moduleId),
+        title,
+        contentType: type,
+        contentUrl: fileUrl,
+        duration: duration ? parseInt(duration) : null,
+        orderNum: order_index,
+        cloudinaryPublicId: publicId
+      };
       
-      const lesson = await LessonModel.create({
-        moduleId: req.params.moduleId,
-        ...req.body,
-        contentUrl,
-        cloudinaryPublicId
-      });
-      
+      console.log('Creating lesson with data:', lessonData);
+      const lesson = await LessonModel.create(lessonData);
+      console.log('Created lesson:', lesson);
+
       res.status(HTTP_STATUS.CREATED).json(
-        createResponse(true, "Lesson created", lesson)
+        createResponse(true, 'Lesson created successfully', lesson)
       );
     } catch (error) {
-      console.error('Error creating lesson:', error);
-      res.status(HTTP_STATUS.SERVER_ERROR).json(
-        createResponse(false, "Failed to create lesson")
+      console.error('❌ Lesson creation failed:', error);
+      
+      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+        createResponse(false, 'Failed to create lesson', null, {
+          code: 'CREATION_ERROR',
+          details: error.message || 'An unexpected error occurred'
+        })
       );
     }
   },

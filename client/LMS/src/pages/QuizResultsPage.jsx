@@ -9,7 +9,6 @@ import {
   CardContent,
   Chip,
   Alert,
-  CircularProgress,
   LinearProgress,
   Grid,
   Divider,
@@ -18,6 +17,7 @@ import {
   ListItemIcon,
   ListItemText
 } from '@mui/material';
+import { ClockLoader } from 'react-spinners';
 import {
   CheckCircle as CorrectIcon,
   Cancel as IncorrectIcon,
@@ -64,7 +64,7 @@ const QuizResultsPage = () => {
     return (
       <Container maxWidth="md" sx={{ py: 4 }}>
         <Box display="flex" justifyContent="center" alignItems="center" minHeight={400}>
-          <CircularProgress />
+          <ClockLoader size={50} color="#1976d2" />
         </Box>
       </Container>
     );

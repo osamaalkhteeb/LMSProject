@@ -7,6 +7,7 @@ import {
   Paper,
   TextField,
   Button,
+  Avatar,
   Stack,
   Divider,
   Alert,
@@ -23,8 +24,10 @@ import {
   Visibility,
   VisibilityOff,
   Lock,
-  Person
+  Person,
+  PhotoCamera
 } from '@mui/icons-material';
+import { ClockLoader } from 'react-spinners';
 
 const SettingsPage = () => {
   const theme = useTheme();
@@ -90,13 +93,31 @@ const SettingsPage = () => {
       if (!user.currentPassword) {
         newErrors.currentPassword = 'Current password is required';
       }
+      
       if (!user.newPassword) {
         newErrors.newPassword = 'New password is required';
-      } else if (user.newPassword.length < 8) {
-        newErrors.newPassword = 'Password must be at least 8 characters';
+      } else {
+        // Validate password requirements to match backend
+        if (user.newPassword.length < 6) {
+          newErrors.newPassword = 'Password must be at least 6 characters';
+        } else if (!/(?=.*[a-z])/.test(user.newPassword)) {
+          newErrors.newPassword = 'Password must contain at least one lowercase letter';
+        } else if (!/(?=.*[A-Z])/.test(user.newPassword)) {
+          newErrors.newPassword = 'Password must contain at least one uppercase letter';
+        } else if (!/(?=.*\d)/.test(user.newPassword)) {
+          newErrors.newPassword = 'Password must contain at least one number';
+        } else if (!/(?=.*[!@#$%^&*(),.?":{}|<>])/.test(user.newPassword)) {
+          newErrors.newPassword = 'Password must contain at least one special character';
+        }
       }
-      if (user.newPassword !== user.confirmPassword) {
+      
+      if (user.newPassword && user.confirmPassword && user.newPassword !== user.confirmPassword) {
         newErrors.confirmPassword = 'Passwords do not match';
+      }
+      
+      // Check if new password is same as current password
+      if (user.currentPassword && user.newPassword && user.currentPassword === user.newPassword) {
+        newErrors.newPassword = 'New password must be different from current password';
       }
     }
     
@@ -137,14 +158,41 @@ const SettingsPage = () => {
       setEditPasswordMode(false);
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
-      // Extract the actual error message from the API response
-      const errorMessage = error.response?.data?.message || 
-                           error.response?.data?.data?.message || 
-                           error.response?.data?.error || 
-                           error.response?.statusText || 
-                           error.message || 
-                           'Failed to update password';
-      setErrors({ currentPassword: errorMessage });
+      console.error('Password change error:', error);
+      
+      // Handle validation errors from backend
+      if (error.response?.data?.error && Array.isArray(error.response.data.error)) {
+        const newErrors = {};
+        error.response.data.error.forEach(err => {
+          if (err.field === 'currentPassword') {
+            newErrors.currentPassword = err.message;
+          } else if (err.field === 'newPassword') {
+            newErrors.newPassword = err.message;
+          } else {
+            // Default to current password field for general errors
+            newErrors.currentPassword = err.message;
+          }
+        });
+        setErrors(newErrors);
+      } else {
+        // Handle single error messages
+        const errorMessage = error.response?.data?.message || 
+                             error.response?.data?.data?.message || 
+                             error.response?.data?.error || 
+                             error.response?.statusText || 
+                             error.message || 
+                             'Failed to update password';
+        
+        // Determine which field to show the error on based on the message
+        if (errorMessage.toLowerCase().includes('current password')) {
+          setErrors({ currentPassword: errorMessage });
+        } else if (errorMessage.toLowerCase().includes('new password') || 
+                   errorMessage.toLowerCase().includes('password must contain')) {
+          setErrors({ newPassword: errorMessage });
+        } else {
+          setErrors({ currentPassword: errorMessage });
+        }
+      }
     }
   };
 
@@ -255,12 +303,18 @@ const SettingsPage = () => {
               <Button
                 variant="contained"
                 color="primary"
-                startIcon={<Save />}
+                startIcon={profileLoading ? <ClockLoader size={16} color="#ffffff" /> : <Save />}
                 onClick={handleSaveName}
                 disabled={profileLoading}
                 fullWidth={isMobile}
+                sx={{
+                  minHeight: '40px',
+                  '& .MuiButton-startIcon': {
+                    marginRight: profileLoading ? '8px' : '8px'
+                  }
+                }}
               >
-                {profileLoading ? 'Saving...' : 'Save'}
+                {profileLoading ? 'Saving Name...' : 'Save'}
               </Button>
               <Button
                 variant="outlined"
@@ -347,7 +401,7 @@ const SettingsPage = () => {
               onChange={handleChange}
               fullWidth
               error={!!errors.newPassword}
-              helperText={errors.newPassword}
+              helperText={errors.newPassword || "Password must contain at least 6 characters, including uppercase, lowercase, number, and special character"}
               sx={{ mb: 2 }}
               InputProps={{
                 startAdornment: (
@@ -403,12 +457,18 @@ const SettingsPage = () => {
               <Button
                 variant="contained"
                 color="primary"
-                startIcon={<Save />}
+                startIcon={profileLoading ? <ClockLoader size={16} color="#ffffff" /> : <Save />}
                 onClick={handleSavePassword}
                 disabled={profileLoading}
                 fullWidth={isMobile}
+                sx={{
+                  minHeight: '40px',
+                  '& .MuiButton-startIcon': {
+                    marginRight: profileLoading ? '8px' : '8px'
+                  }
+                }}
               >
-                {profileLoading ? 'Changing...' : 'Change Password'}
+                {profileLoading ? 'Changing Password...' : 'Change Password'}
               </Button>
               <Button
                 variant="outlined"

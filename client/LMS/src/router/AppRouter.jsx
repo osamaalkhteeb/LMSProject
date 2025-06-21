@@ -17,9 +17,10 @@ import MyProfile from '../components/MyProfile';
 import SettingsPage from '../pages/SettingsPage';
 import ProtectedRoute from '../components/ProtectedRoute';
 import OAuthCallback from '../components/OAuthCallback';
+import CourseDetailsView from '../components/student/CourseDetailsView';
 import { useAuth } from '../hooks/useAuth';
 
-const AppRouter = ({ mode, toggleDarkMode }) => {
+const AppRouter = () => {
   const { user } = useAuth();
 
   // Redirect authenticated users from login/signup to their dashboard
@@ -50,28 +51,30 @@ const AppRouter = ({ mode, toggleDarkMode }) => {
         <Box sx={{ flex: 1 }}>
           <Routes>
             {/* Home Page - Courses Catalog with Header */}
-            <Route path="/" element={
-              <>
-                <Header mode={mode} toggleDarkMode={toggleDarkMode} />
-                <CourseCatalog />
-              </>
-            } />
+        <Route path="/" element={
+          <>
+            <Header />
+            <CourseCatalog />
+            <Footer />
+          </>
+        } />
             
             {/* Public Routes - WITH HEADER for back navigation */}
+            <Route path="/course/:id" element={
+              <>
+                <Header />
+                <CourseDetailsView />
+                <Footer />
+              </>
+            } />
             <Route path="/login" element={
               <AuthRedirect>
-                <>
-                  <Header mode={mode} toggleDarkMode={toggleDarkMode} />
-                  <LoginPage />
-                </>
+                <LoginPage />
               </AuthRedirect>
             } />
             <Route path="/signup" element={
               <AuthRedirect>
-                <>
-                  <Header mode={mode} toggleDarkMode={toggleDarkMode} />
-                  <SignupPage />
-                </>
+                <SignupPage />
               </AuthRedirect>
             } />
             <Route path="/oauth-callback" element={<OAuthCallback />} />
@@ -82,7 +85,7 @@ const AppRouter = ({ mode, toggleDarkMode }) => {
             {/* Protected Dashboard Routes - WITH HEADER */}
             <Route path="/dashboard/student" element={
               <>
-                <Header mode={mode} toggleDarkMode={toggleDarkMode} />
+                <Header />
                 <ProtectedRoute requiredRole="student">
                   <StudentDashboard />
                 </ProtectedRoute>
@@ -90,7 +93,7 @@ const AppRouter = ({ mode, toggleDarkMode }) => {
             } />
             <Route path="/dashboard/instructor" element={
               <>
-                <Header mode={mode} toggleDarkMode={toggleDarkMode} />
+                <Header />
                 <ProtectedRoute requiredRole="instructor">
                   <InstructorDashboard />
                 </ProtectedRoute>
@@ -98,7 +101,7 @@ const AppRouter = ({ mode, toggleDarkMode }) => {
             } />
             <Route path="/dashboard/admin" element={
               <>
-                <Header mode={mode} toggleDarkMode={toggleDarkMode} />
+                <Header />
                 <ProtectedRoute requiredRole="admin">
                   <AdminDashboard />
                 </ProtectedRoute>
@@ -108,7 +111,7 @@ const AppRouter = ({ mode, toggleDarkMode }) => {
             {/* Profile and Settings Routes */}
             <Route path="/MyProfile" element={
               <>
-                <Header mode={mode} toggleDarkMode={toggleDarkMode} />
+                <Header />
                 <ProtectedRoute>
                   <MyProfile />
                 </ProtectedRoute>
@@ -116,7 +119,7 @@ const AppRouter = ({ mode, toggleDarkMode }) => {
             } />
             <Route path="/SettingsPage" element={
               <>
-                <Header mode={mode} toggleDarkMode={toggleDarkMode} />
+                <Header />
                 <ProtectedRoute>
                   <SettingsPage />
                 </ProtectedRoute>
@@ -126,7 +129,7 @@ const AppRouter = ({ mode, toggleDarkMode }) => {
             {/* Quiz Routes */}
             <Route path="/quiz/:quizId" element={
               <>
-                <Header mode={mode} toggleDarkMode={toggleDarkMode} />
+                <Header />
                 <ProtectedRoute requiredRole="student">
                   <QuizTakingPage />
                 </ProtectedRoute>
@@ -134,7 +137,7 @@ const AppRouter = ({ mode, toggleDarkMode }) => {
             } />
             <Route path="/quiz/:quizId/results" element={
               <>
-                <Header mode={mode} toggleDarkMode={toggleDarkMode} />
+                <Header />
                 <ProtectedRoute requiredRole="student">
                   <QuizResultsPage />
                 </ProtectedRoute>
@@ -142,7 +145,7 @@ const AppRouter = ({ mode, toggleDarkMode }) => {
             } />
             <Route path="/quiz/:quizId/history" element={
               <>
-                <Header mode={mode} toggleDarkMode={toggleDarkMode} />
+                <Header />
                 <ProtectedRoute requiredRole="student">
                   <QuizHistoryPage />
                 </ProtectedRoute>

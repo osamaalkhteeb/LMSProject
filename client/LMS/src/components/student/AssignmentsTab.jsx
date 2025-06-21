@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from "react";
+import { ClockLoader } from 'react-spinners';
 import {
   Card,
   CardContent,
@@ -12,7 +13,6 @@ import {
   TableBody,
   Button,
   Chip,
-  CircularProgress,
   Alert,
   Dialog,
   DialogTitle,
@@ -207,7 +207,7 @@ const AssignmentsTab = ({ enrolledCourses }) => {
       <Card sx={{ borderRadius: 2 }}>
         <CardContent>
           <Box display="flex" justifyContent="center" alignItems="center" minHeight={200}>
-            <CircularProgress />
+            <ClockLoader size={50} color="#1976d2" />
           </Box>
         </CardContent>
       </Card>
@@ -399,7 +399,7 @@ const AssignmentsTab = ({ enrolledCourses }) => {
             onClick={handleSubmitAssignment}
             variant="contained"
             disabled={submitting || (!submissionText.trim() && !submissionFile)}
-            startIcon={submitting ? <CircularProgress size={16} /> : <UploadIcon />}
+            startIcon={submitting ? <ClockLoader size={16} color="#1976d2" /> : <UploadIcon />}
           >
             {submitting ? 'Submitting...' : 'Submit'}
           </Button>

@@ -6,9 +6,9 @@ import {
   Grid,
   Card,
   CardContent,
-  CircularProgress,
   Alert
 } from '@mui/material';
+import { ClockLoader } from 'react-spinners';
 import { FiTrendingUp, FiUsers, FiBookOpen, FiDollarSign, FiUserCheck, FiTarget } from 'react-icons/fi';
 import {
   Chart as ChartJS,
@@ -44,7 +44,7 @@ const AnalyticsTab = () => {
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight={300}>
-        <CircularProgress />
+        <ClockLoader size={50} color="#1976d2" />
       </Box>
     );
   }
@@ -216,7 +216,7 @@ const AnalyticsTab = () => {
       
       {/* Key Metrics Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        
+
         <Grid item xs={12} sm={6} md={2}>
           <StatCard
             title="Active Users"
