@@ -11,7 +11,6 @@ import {
   TableBody,
   Button,
   Chip,
-  CircularProgress,
   Alert,
   Box,
   IconButton,
@@ -19,6 +18,7 @@ import {
   LinearProgress,
   Paper,
 } from "@mui/material";
+import { ClockLoader } from 'react-spinners';
 import {
   ArrowBack as BackIcon,
   Visibility as ViewIcon,
@@ -99,7 +99,7 @@ const QuizHistoryPage = () => {
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
+        <ClockLoader size={50} color="#1976d2" />
       </Box>
     );
   }
@@ -156,12 +156,7 @@ const QuizHistoryPage = () => {
             </Typography>
             <Typography variant="h6">{attempts.length}</Typography>
           </Box>
-          <Box>
-            <Typography variant="body2" color="text.secondary">
-              Passing Score
-            </Typography>
-            <Typography variant="h6">{quiz?.passing_score || 0}%</Typography>
-          </Box>
+
           <Box>
             <Typography variant="body2" color="text.secondary">
               Best Score

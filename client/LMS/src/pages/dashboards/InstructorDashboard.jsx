@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -6,7 +7,6 @@ import {
   Paper,
   Tabs,
   Tab,
-  CircularProgress,
   Alert,
   Dialog,
   DialogTitle,
@@ -21,6 +21,7 @@ import {
   TableHead,
   TableRow
 } from "@mui/material";
+import { ClockLoader } from 'react-spinners';
 import { MoreVert as MoreIcon } from "@mui/icons-material";
 import InstructorProfile from "../../components/instructor/InstructorProfile";
 import StatCard from "../../components/instructor/StatsCard";
@@ -195,7 +196,7 @@ const InstructorDashboard = () => {
   // Refresh both data sets
   const handleRefreshAll = () => {
     fetchInstructorData();
-    fetchAnalyticsData();
+    refetchAnalytics();
   };
 
   const handleTabChange = (event, newValue) => {
@@ -263,7 +264,7 @@ const InstructorDashboard = () => {
             <Grid item xs={12} sm={6} md={4} key={i}>
               <Paper sx={{ p: 2, textAlign: 'center' }}>
                 <Box sx={{ height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <CircularProgress size={24} />
+                  <ClockLoader size={24} color="#1976d2" />
                 </Box>
               </Paper>
             </Grid>
@@ -346,6 +347,7 @@ ve            error={dashboardData.error}
           analytics={analyticsData}
           loading={analyticsLoading}
           error={analyticsError}
+          onRefresh={refetchAnalytics}
         />
       )}
 

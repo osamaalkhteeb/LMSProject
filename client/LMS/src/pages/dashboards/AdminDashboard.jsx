@@ -8,9 +8,9 @@ import {
   Paper,
   Tabs,
   Tab,
-  CircularProgress,
   Alert,
 } from "@mui/material";
+import { ClockLoader } from "react-spinners";
 import { useAuth } from "../../hooks/useAuth";
 import StatCard from "../../components/admin/StatCard";
 import UserManagement from "../../components/admin/UserManagement";
@@ -117,7 +117,7 @@ const AdminDashboard = () => {
                       justifyContent: "center",
                     }}
                   >
-                    <CircularProgress size={24} />
+                    <ClockLoader size={24} color="#1976d2" />
                   </Box>
                 </Paper>
               </Grid>

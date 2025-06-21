@@ -331,7 +331,9 @@ export const validateUserProfile = (userData, isRegistration = false) => {
   
   // Validate avatar_url if provided - backend: Joi.string().uri().optional().allow("")
   if (userData.avatar_url && userData.avatar_url.trim() !== '') {
-    const urlValidation = validateUrl(userData.avatar_url, 'Avatar URL');
+    // Clean the URL before validation (remove backticks and trim)
+    const cleanUrl = userData.avatar_url.trim().replace(/`/g, '');
+    const urlValidation = validateUrl(cleanUrl, 'Avatar URL');
     if (!urlValidation.success) errors.push(urlValidation.message);
   }
   

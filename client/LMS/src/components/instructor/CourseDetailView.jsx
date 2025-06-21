@@ -5,7 +5,6 @@ import {
   Typography,
   Button,
   Chip,
-  CircularProgress,
   Alert,
   Dialog,
   DialogTitle,
@@ -14,6 +13,7 @@ import {
   TextField,
   Snackbar
 } from "@mui/material";
+import { ClockLoader } from 'react-spinners';
 import {
    ArrowBack as ArrowBackIcon,
    Add as AddIcon
@@ -40,6 +40,7 @@ import { getModulesByCourse, updateModule, createModule, deleteModule } from '..
 import { updateLesson, createLesson, deleteLesson } from '../../services/lessonService';
 import { createQuiz, deleteQuiz } from '../../services/quizService';
 import { createAssignment, deleteAssignment } from '../../services/assignmentService';
+import { validateFileUpload, getAcceptAttribute } from '../../utils/constants';
 import SortableModule from './SortableModule';
 import QuizManagement from './QuizManagement';
 
@@ -70,7 +71,7 @@ const CourseDetailView = ({ course, onBack }) => {
     file: null
   });
   const [quizForm, setQuizForm] = useState({ title: '', passing_score: 50, time_limit: 10, max_attempts: 1 });
-  const [assignmentForm, setAssignmentForm] = useState({ title: '', description: '', deadline: '', points: 100 });
+  const [assignmentForm, setAssignmentForm] = useState({ title: '', description: '', deadline: '' });
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   
   const sensors = useSensors(
@@ -262,6 +263,17 @@ const CourseDetailView = ({ course, onBack }) => {
           setSnackbar({ open: true, message: 'Please select a file to upload', severity: 'error' });
           return;
         }
+        
+        // Validate file type and size using constants
+        const validation = validateFileUpload(lessonForm.file, lessonForm.contentType);
+        if (!validation.isValid) {
+          setSnackbar({ 
+            open: true, 
+            message: validation.error, 
+            severity: 'error' 
+          });
+          return;
+        }
       }
       
       const moduleIndex = modules.findIndex(module => module.id === selectedModuleId);
@@ -299,7 +311,18 @@ const CourseDetailView = ({ course, onBack }) => {
       setSnackbar({ open: true, message: 'Lesson created successfully', severity: 'success' });
     } catch (error) {
       console.error('Error creating lesson:', error);
-      setSnackbar({ open: true, message: 'Failed to create lesson', severity: 'error' });
+      
+      // Extract error message from server response
+      let errorMessage = 'Failed to create lesson';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.error?.details) {
+        errorMessage = error.response.data.error.details;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setSnackbar({ open: true, message: errorMessage, severity: 'error' });
     }
   };
 
@@ -327,19 +350,30 @@ const CourseDetailView = ({ course, onBack }) => {
   // Quiz CRUD handlers
   const handleCreateQuiz = async () => {
     try {
+      console.log('=== QUIZ CREATION DEBUG ===');
+      console.log('Quiz form data:', quizForm);
+      console.log('Selected module ID:', selectedModuleId);
+      console.log('Course ID:', course.id);
+      
       // First create a lesson for the quiz
       const moduleIndex = modules.findIndex(module => module.id === selectedModuleId);
       const orderNum = modules[moduleIndex].lessons.length + 1;
       
-      const newLesson = await createLesson(course.id, selectedModuleId, {
+      const lessonData = {
         title: quizForm.title,
         contentType: 'quiz',
         duration: quizForm.time_limit,
         orderNum
-      });
+      };
+      console.log('Creating lesson with data:', lessonData);
+      
+      const newLesson = await createLesson(course.id, selectedModuleId, lessonData);
+      console.log('Created lesson:', newLesson);
       
       // Then create the quiz linked to this lesson
-      await createQuiz(course.id, newLesson.id, quizForm);
+      console.log('Creating quiz with data:', quizForm);
+      const createdQuiz = await createQuiz(course.id, newLesson.id, quizForm);
+      console.log('Created quiz:', createdQuiz);
       
       setOpenQuizDialog(false);
       setQuizForm({ title: '', passing_score: 50, time_limit: 10, max_attempts: 1 });
@@ -369,28 +403,60 @@ const CourseDetailView = ({ course, onBack }) => {
 
   // Assignment CRUD handlers
   const handleCreateAssignment = async () => {
+    let createdLesson = null;
     try {
+      console.log('=== ASSIGNMENT CREATION DEBUG ===');
+      console.log('Assignment form data:', assignmentForm);
+      console.log('Selected module ID:', selectedModuleId);
+      console.log('Course ID:', course.id);
+      
       // First create a lesson for the assignment
       const moduleIndex = modules.findIndex(module => module.id === selectedModuleId);
       const orderNum = modules[moduleIndex].lessons.length + 1;
       
-      const newLesson = await createLesson(course.id, selectedModuleId, {
+      const lessonData = {
         title: assignmentForm.title,
         contentType: 'assignment',
         duration: 0,
         orderNum
-      });
+      };
+      console.log('Creating lesson with data:', lessonData);
+      
+      createdLesson = await createLesson(course.id, selectedModuleId, lessonData);
+      console.log('Created lesson:', createdLesson);
       
       // Then create the assignment linked to this lesson
-      await createAssignment(course.id, newLesson.id, assignmentForm);
+      console.log('Creating assignment with data:', assignmentForm);
+      const createdAssignment = await createAssignment(course.id, createdLesson.id, assignmentForm);
+      console.log('Created assignment:', createdAssignment);
       
       setOpenAssignmentDialog(false);
-      setAssignmentForm({ title: '', description: '', deadline: '', points: 100 });
+      setAssignmentForm({ title: '', description: '', deadline: '' });
       setSnackbar({ open: true, message: 'Assignment created successfully', severity: 'success' });
       fetchCourseModules(); // Refresh to get updated data
     } catch (error) {
       console.error('Error creating assignment:', error);
-      setSnackbar({ open: true, message: 'Failed to create assignment', severity: 'error' });
+      
+      // If lesson was created but assignment failed, clean up the lesson
+      if (createdLesson && createdLesson.id) {
+        try {
+          console.log('Assignment creation failed, cleaning up lesson:', createdLesson.id);
+          await deleteLesson(course.id, createdLesson.id);
+          console.log('Successfully cleaned up lesson');
+        } catch (cleanupError) {
+          console.error('Failed to cleanup lesson:', cleanupError);
+        }
+      }
+      
+      // Display specific validation messages from your validation middleware
+      let errorMessage = 'Failed to create assignment';
+      if (error.isValidationError) {
+        errorMessage = error.message; // This will contain the validation messages
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
+      setSnackbar({ open: true, message: errorMessage, severity: 'error' });
     }
   };
 
@@ -410,7 +476,7 @@ const CourseDetailView = ({ course, onBack }) => {
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
-        <CircularProgress />
+        <ClockLoader size={50} color="#1976d2" />
       </Box>
     );
   }
@@ -631,7 +697,7 @@ const CourseDetailView = ({ course, onBack }) => {
             sx={{ mb: 2 }}
           >
             <option value="url">{lessonForm.contentType === 'video' ? 'YouTube/Video URL' : 'Document URL'}</option>
-            <option value="file">{lessonForm.contentType === 'video' ? 'Upload Video File' : 'Upload PDF File'}</option>
+            <option value="file">{lessonForm.contentType === 'video' ? 'Upload Video File' : 'Upload Document File'}</option>
           </TextField>
           
           {lessonForm.uploadType === 'url' ? (
@@ -649,7 +715,7 @@ const CourseDetailView = ({ course, onBack }) => {
           ) : (
             <Box sx={{ mb: 2 }}>
               <input
-                accept={lessonForm.contentType === 'video' ? 'video/*' : 'application/pdf'}
+                accept={getAcceptAttribute(lessonForm.contentType)}
                 style={{ display: 'none' }}
                 id="lesson-file-upload"
                 type="file"
@@ -662,7 +728,7 @@ const CourseDetailView = ({ course, onBack }) => {
                   fullWidth
                   sx={{ mb: 1, textTransform: 'none' }}
                 >
-                  {lessonForm.file ? lessonForm.file.name : `Choose ${lessonForm.contentType === 'video' ? 'Video' : 'PDF'} File`}
+                  {lessonForm.file ? lessonForm.file.name : `Choose ${lessonForm.contentType === 'video' ? 'Video' : 'Document'} File`}
                 </Button>
               </label>
               {lessonForm.file && (
@@ -670,6 +736,12 @@ const CourseDetailView = ({ course, onBack }) => {
                   File size: {(lessonForm.file.size / (1024 * 1024)).toFixed(2)} MB
                 </Typography>
               )}
+              <Typography variant="caption" color="text.secondary" display="block">
+                {lessonForm.contentType === 'video' 
+                  ? 'Supported: MP4, AVI, MOV, WMV, FLV, WebM, MKV (Max 25MB)'
+                  : 'Supported: PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, TXT (Max 5MB)'
+                }
+              </Typography>
             </Box>
           )}
           <TextField
@@ -784,15 +856,7 @@ const CourseDetailView = ({ course, onBack }) => {
             sx={{ mb: 2 }}
             InputLabelProps={{ shrink: true }}
           />
-          <TextField
-            margin="dense"
-            label="Points"
-            fullWidth
-            variant="outlined"
-            type="number"
-            value={assignmentForm.points}
-            onChange={(e) => setAssignmentForm({ ...assignmentForm, points: parseInt(e.target.value) })}
-          />
+
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenAssignmentDialog(false)}>Cancel</Button>

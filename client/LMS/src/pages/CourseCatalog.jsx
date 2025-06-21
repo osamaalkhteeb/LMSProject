@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { ClockLoader } from "react-spinners";
 import {
   Container,
   Grid,
@@ -23,7 +24,6 @@ import {
   Tabs,
   Tab,
   Divider,
-  CircularProgress,
   Alert,
   Snackbar,
 } from "@mui/material";
@@ -227,7 +227,7 @@ const CourseCatalog = () => {
   if (loading) {
     return (
       <Container maxWidth="xl" sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
-        <CircularProgress />
+        <ClockLoader size={50} color="#1976d2" />
       </Container>
     );
   }

@@ -9,9 +9,9 @@ import {
   TextField,
   Button,
   Stack,
-  Alert,
-  CircularProgress
+  Alert
 } from '@mui/material';
+import { ClockLoader } from 'react-spinners';
 import { Email, Edit, CameraAlt, Save, Cancel } from '@mui/icons-material';
 import { useUserProfile } from '../hooks/useUsers';
 
@@ -49,7 +49,7 @@ const MyProfile = () => {
       setUpdateError('');
       setUpdateSuccess('');
       
-      // Update profile data (include required name field)
+      // Update profile data (bio and name only)
       await updateProfile({
         name: profile.name,
         bio: tempBio
@@ -89,7 +89,7 @@ const MyProfile = () => {
           minHeight: '100vh'
         }}
       >
-        <CircularProgress />
+        <ClockLoader size={50} color="#1976d2" />
       </Box>
     );
   }
